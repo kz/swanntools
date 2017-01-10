@@ -7,7 +7,8 @@ This repository is part of a long-term project to build a more secure system pig
 
 Current task: Conduct research into authentication using Wireshark
 
-- [ ] Create a Python script which can authenticate with the DVR via its media protocol
+- [ ] Port existing code to Go (just to learn a new language and to use [koding/kite](https://github.com/koding/kite) later on)
+- [ ] Create a Go script which can authenticate with the DVR via its media protocol
 - [ ] Add streaming of cameras to the script
 - [ ] Plan a method to stream the H264 stream to AWS/Azure in order to transcode, store and stream video
 
