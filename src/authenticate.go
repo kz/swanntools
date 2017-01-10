@@ -4,6 +4,8 @@ import (
 	"flag"
 	"os"
 	"encoding/hex"
+	"strconv"
+	"fmt"
 )
 
 // Declare values of the byte arrays required in string form
@@ -26,13 +28,43 @@ func init() {
 }
 
 func getIntentMessage(intentValue string) []byte {
-	hello, _ := hex.DecodeString("00000000000000000000010000000a7b000000292300000000001c010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
-	return hello
+	hexValues := IntentValues[:30] + intentValue + IntentValues[32:]
+	byteArray, _ := hex.DecodeString(hexValues)
+	return byteArray
+}
+
+func getIntentResponseMessage(intentValue string) []byte {
+	hexValues := IntentResponseValues[:16] + intentValue + IntentResponseValues[18:]
+	byteArray, _ := hex.DecodeString(hexValues)
+	return byteArray
+}
+
+func getLoginMessage(user string, pass string, intentValue string) []byte {
+	// Add incremented intent value to hex values
+	parsedIntentValue, _ := strconv.ParseInt(intentValue, 16, 8)
+	incIntentHexValue := fmt.Sprintf("%x", parsedIntentValue+1)
+	hexValues := AuthValues[:30] + incIntentHexValue + AuthValues[32:]
+
+	// Add username to hex values
+	for i, v := range user {
+		startPos := 54 + 2*i
+		endPos := 56 + 2*i
+		hexValues = hexValues[:startPos] + fmt.Sprintf("%x", int(v)) + hexValues[endPos:]
+	}
+
+	// Add password to hex values
+	for i, v := range pass {
+		startPos := 118 + 2*i
+		endPos := 120 + 2*i
+		hexValues = hexValues[:startPos] + fmt.Sprintf("%x", int(v)) + hexValues[endPos:]
+	}
+
+	byteArray, _ := hex.DecodeString(hexValues)
+	return byteArray
+
 }
 
 func main() {
-	getIntentMessage("7b")
-
 	// Ensure that the command line flags are not empty
 	if dest == "" || user == "" || pass == "" {
 		flag.Usage()
