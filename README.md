@@ -67,4 +67,4 @@ Finally, the DVR will return one of two responses of length 8:
 
 ---
 
-Observing the above process multiple times, you will find that the value of `XX` (and therefore `YY`) sent by your web client will increase by one or more every time you log in. I can only guess the possible reasons. Perhaps it may be to track sessions? 
+Observing the above process multiple times, you will find that the value of `XX` (and therefore `YY`) sent by your web client will increase by one or more every time you log in. I can only guess the possible reasons. Perhaps it may be to track sessions? However, it appears that from running the [src/authenticate.go](src/authenticate.go) script for multiple intent values, the **the intent value does not need to increment** and can stay constant.
