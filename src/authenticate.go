@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"fmt"
 	"net"
+	"bytes"
 )
 
 // Declare values of the byte arrays required in string form
@@ -84,36 +85,75 @@ func getLoginMessage(user string, pass string, intentValue string) []byte {
 
 }
 
-func sendIntentMessage(intentMessage []byte) {
-	// Reference: https://gist.github.com/iwanbk/2295233
+// Reference: https://gist.github.com/iwanbk/2295233
+func authenticate(intentValue string) {
+	intentMessage := getIntentMessage(intentValue)
+	intentResponseMessage := getIntentResponseMessage(intentValue)
+	loginMessage := getLoginMessage(user, pass, intentValue)
+
+	// Establish the TCP connection
+	fmt.Fprintln(os.Stdout, "Establishing TCP connection.")
 	tcpAddr, err := net.ResolveTCPAddr("tcp", dest)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "ResolveTCPAddr failed: ", err.Error())
 		os.Exit(1)
 	}
 
-	conn, err := net.DialTCP("tcp", nil, tcpAddr)
+	intentConn, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Dial failed:", err.Error())
 		os.Exit(1)
 	}
 
-	_, err = conn.Write(intentMessage)
+	// Send the intent message
+	fmt.Fprintln(os.Stdout, "Sending intent message.")
+	_, err = intentConn.Write(intentMessage)
 	if err != nil {
-		println("Writing intent message to server failed: ", err.Error())
+		fmt.Fprintln(os.Stderr, "Writing intent message to server failed: ", err.Error())
 		os.Exit(1)
 	}
 
-	reply := make([]byte, 500)
-	_, err = conn.Read(reply)
+	// Receive the intent response message
+	fmt.Fprintln(os.Stdout, "Receiving intent response message.")
+	intentReply := make([]byte, 500)
+	_, err = intentConn.Read(intentReply)
 	if err != nil {
-		println("Connection read of intent message response failed:", err.Error())
+		fmt.Fprintln(os.Stderr, "Connection read of intent message response failed:", err.Error())
 		os.Exit(1)
 	}
 
-	conn.Close()
+	// Check whether the intent message response is as expected
+	fmt.Fprintln(os.Stdout, "Checking intent response message.")
+	if !bytes.Equal(intentReply, intentResponseMessage) {
+		fmt.Fprintln(os.Stderr, "Intent message response not as expected: ", string(intentReply))
+		os.Exit(1)
+	}
 
-	// TODO: Check the intent message response against the generated one
+	intentConn.Close()
+
+	loginConn, err := net.DialTCP("tcp", nil, tcpAddr)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Dial failed:", err.Error())
+		os.Exit(1)
+	}
+
+	// Send the login message
+	fmt.Fprintln(os.Stdout, "Sending login message.")
+	_, err = loginConn.Write(loginMessage)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Writing intent message to server failed: ", err.Error())
+		os.Exit(1)
+	}
+
+	// Receive the login response message
+	fmt.Fprintln(os.Stdout, "Receiving login response message.")
+	loginReply := make([]byte, 8)
+	_, err = loginConn.Read(loginReply)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Connection read of intent message response failed:", err.Error())
+		os.Exit(1)
+	}
+	println(string(loginReply))
 }
 
 func main() {
@@ -129,5 +169,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	sendIntentMessage(getIntentMessage("7b"))
+	authenticate("1e")
 }
