@@ -90,6 +90,8 @@ func authenticate(intentValue string) {
 	intentMessage := getIntentMessage(intentValue)
 	intentResponseMessage := getIntentResponseMessage(intentValue)
 	loginMessage := getLoginMessage(user, pass, intentValue)
+	successfulLoginMessage, _ := hex.DecodeString(SuccessfulLoginValues)
+	failedLoginMessage, _ := hex.DecodeString(FailedLoginValues)
 
 	// Establish the TCP connection
 	fmt.Fprintln(os.Stdout, "Establishing TCP connection.")
@@ -122,6 +124,8 @@ func authenticate(intentValue string) {
 		os.Exit(1)
 	}
 
+	intentConn.Close()
+
 	// Check whether the intent message response is as expected
 	fmt.Fprintln(os.Stdout, "Checking intent response message.")
 	if !bytes.Equal(intentReply, intentResponseMessage) {
@@ -129,7 +133,6 @@ func authenticate(intentValue string) {
 		os.Exit(1)
 	}
 
-	intentConn.Close()
 
 	loginConn, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
@@ -153,7 +156,20 @@ func authenticate(intentValue string) {
 		fmt.Fprintln(os.Stderr, "Connection read of intent message response failed:", err.Error())
 		os.Exit(1)
 	}
-	println(string(loginReply))
+
+	loginConn.Close()
+
+	// Check the login response message status
+	fmt.Fprintln(os.Stdout, "Checking intent response message.")
+	if bytes.Equal(loginReply, successfulLoginMessage) {
+		fmt.Fprintln(os.Stdout, "Successfully logged in!")
+	} else if bytes.Equal(loginReply, failedLoginMessage) {
+		fmt.Fprintln(os.Stderr, "Authentication failed due to invalid credentials.")
+		os.Exit(1)
+	} else {
+		fmt.Fprintln(os.Stderr, "Authentication failed due to unknown reason.")
+		os.Exit(1)
+	}
 }
 
 func main() {
@@ -169,5 +185,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	authenticate("1e")
+	authenticate("1a")
 }

@@ -5,12 +5,25 @@ import (
 	"os"
 	"encoding/hex"
 	"bytes"
+	"fmt"
 )
 
 func setUpEnvVars() {
 	destEnv, userEnv, passEnv := os.Getenv("AUTH_DEST"), os.Getenv("AUTH_USER"), os.Getenv("AUTH_PASS")
 	if destEnv != "" && userEnv != "" && passEnv != "" {
 		dest, user, pass = destEnv, userEnv, passEnv
+	}
+}
+
+func TestLoginValuesCanBeDecoded(t *testing.T) {
+	_, err := hex.DecodeString(SuccessfulLoginValues)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Unable to decode successful login values to byte array: ", err.Error())
+	}
+
+	_, err = hex.DecodeString(FailedLoginValues)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Unable to decode failed login values to byte array: ", err.Error())
 	}
 }
 
