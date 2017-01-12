@@ -23,7 +23,6 @@ const (
 var dest string
 var user string
 var pass string
-var intentValue string
 
 func init() {
 	// Retrieve the command line flags
@@ -86,26 +85,17 @@ func getLoginMessage(user string, pass string, intentValue string) []byte {
 }
 
 // Reference: https://gist.github.com/iwanbk/2295233
-func authenticate(intentValue string) {
+func sendIntent(intentValue string, tcpAddr *net.TCPAddr) {
 	intentMessage := getIntentMessage(intentValue)
 	intentResponseMessage := getIntentResponseMessage(intentValue)
-	loginMessage := getLoginMessage(user, pass, intentValue)
-	successfulLoginMessage, _ := hex.DecodeString(SuccessfulLoginValues)
-	failedLoginMessage, _ := hex.DecodeString(FailedLoginValues)
 
-	// Establish the TCP connection
-	fmt.Fprintln(os.Stdout, "Establishing TCP connection.")
-	tcpAddr, err := net.ResolveTCPAddr("tcp", dest)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "ResolveTCPAddr failed: ", err.Error())
-		os.Exit(1)
-	}
-
+	// Set up the intent connection
 	intentConn, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Dial failed:", err.Error())
 		os.Exit(1)
 	}
+	defer intentConn.Close()
 
 	// Send the intent message
 	fmt.Fprintln(os.Stdout, "Sending intent message.")
@@ -124,21 +114,26 @@ func authenticate(intentValue string) {
 		os.Exit(1)
 	}
 
-	intentConn.Close()
-
 	// Check whether the intent message response is as expected
 	fmt.Fprintln(os.Stdout, "Checking intent response message.")
 	if !bytes.Equal(intentReply, intentResponseMessage) {
 		fmt.Fprintln(os.Stderr, "Intent message response not as expected: ", string(intentReply))
 		os.Exit(1)
 	}
+}
 
+func sendLogin(intentValue string, tcpAddr *net.TCPAddr) {
+	loginMessage := getLoginMessage(user, pass, intentValue)
+	successfulLoginMessage, _ := hex.DecodeString(SuccessfulLoginValues)
+	failedLoginMessage, _ := hex.DecodeString(FailedLoginValues)
 
+	// Set up the login connection
 	loginConn, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Dial failed:", err.Error())
 		os.Exit(1)
 	}
+	defer loginConn.Close()
 
 	// Send the login message
 	fmt.Fprintln(os.Stdout, "Sending login message.")
@@ -157,10 +152,8 @@ func authenticate(intentValue string) {
 		os.Exit(1)
 	}
 
-	loginConn.Close()
-
 	// Check the login response message status
-	fmt.Fprintln(os.Stdout, "Checking intent response message.")
+	fmt.Fprintln(os.Stdout, "Checking login response message.")
 	if bytes.Equal(loginReply, successfulLoginMessage) {
 		fmt.Fprintln(os.Stdout, "Successfully logged in!")
 	} else if bytes.Equal(loginReply, failedLoginMessage) {
@@ -170,6 +163,37 @@ func authenticate(intentValue string) {
 		fmt.Fprintln(os.Stderr, "Authentication failed due to unknown reason.")
 		os.Exit(1)
 	}
+}
+
+func sendSettings(tcpAddr *net.TCPAddr) {
+	// Send the DVR setup message request
+	SetupMessageValues := "00000000000000000000010000000e1c0000000000000000000014000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+	setupMessage, _ := hex.DecodeString(SetupMessageValues)
+	setupConn, err := net.DialTCP("tcp", nil, tcpAddr)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Dial failed:", err.Error())
+		os.Exit(1)
+	}
+	defer setupConn.Close()
+
+	// Send the setup message
+	fmt.Fprintln(os.Stdout, "Sending setup message.")
+	_, err = setupConn.Write(setupMessage)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Writing setup message to server failed: ", err.Error())
+		os.Exit(1)
+	}
+
+	// Receive the setup response message
+	fmt.Fprintln(os.Stdout, "Receiving setup response message.")
+	setupReply := make([]byte, 13000)
+	setupRead, err := setupConn.Read(setupReply)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Connection read of setup message response failed:", err.Error())
+		os.Exit(1)
+	}
+
+	println(string(setupRead))
 }
 
 func main() {
@@ -185,5 +209,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	authenticate("1a")
+	// Get the TCP address
+	fmt.Fprintln(os.Stdout, "Establishing TCP connection.")
+	tcpAddr, err := net.ResolveTCPAddr("tcp", dest)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "ResolveTCPAddr failed: ", err.Error())
+		os.Exit(1)
+	}
+
+	sendIntent("1a", tcpAddr)
+	sendLogin("1a", tcpAddr)
+	sendSettings(tcpAddr)
 }
