@@ -1,5 +1,5 @@
 # swanntools
-Capture tools for the Swann DVR4-1200 DVR, inspired by [meatheadmike/swanntools](https://github.com/meatheadmike/swanntools) which was developed for DVR8-2600. Whereas the latter's mobile stream script is compatible with the DVR4-1200, the media script (featuring much higher quality) does not.
+Capture tools for the Swann DVR4-1200 DVR (also known as DVR04B and DM70-D, manufactured by RaySharp), inspired by [meatheadmike/swanntools](https://github.com/meatheadmike/swanntools) which was developed for DVR8-2600. Whereas the latter's mobile stream script is compatible with the DVR4-1200, the media script (featuring much higher quality) does not.
 
 This repository is part of a long-term project to build a more secure system piggybacking off the DVR4-1200 with cloud backups and much better web/mobile clients.
 
@@ -11,7 +11,9 @@ Current task: Conduct research into authentication using Wireshark
 - [ ] Add streaming of cameras to the script
 - [ ] Plan a method to stream the H264 stream to AWS/Azure in order to transcode, store and stream video
 
-## Research
+## Research Journal
+
+The purpose of this section is to detail the network messages sent in Swann's web client.
 
 The following observations can be reproduced using Wireshark captures with the capture filter `host [DVR IP] and port [MEDIA PORT (9000)]` while using the web client (default port 85). All communication with the DVR is made over TCP.
 
@@ -19,9 +21,11 @@ A hex editor such as [hexed.it](hexed.it) will be very useful for interpreting t
 
 You will also find that an ASCII to Hex converter may be useful. I recommend [asciitohex.com](http://www.asciitohex.com/).
 
-#### Authentication
+The below research is in chronological order. Interesting revelations are made throughout.
 
-To authenticate, the steps are as follows:
+### Authentication (2017-01-10 to 2017-01-12)
+
+The web client's authentication stages are as follows:
 
 1. Send a message establishing an intent to authenticate
 2. Receive a message acknowledging your intent
@@ -67,3 +71,15 @@ Finally, the DVR will return one of two responses of length 8:
 ---
 
 Observing the above process multiple times, you will find that the value of `XX` (and therefore `YY`) sent by your web client will increase by one or more every time you log in. I can only guess the possible reasons. Perhaps it may be to track sessions? However, it appears that from running the [src/authenticate.go](src/authenticate.go) script for multiple intent values, the **the intent value does not need to increment** and can stay constant.
+
+### DVR Settings (and lack of authentication) (2017-01-13)
+
+Immediately after authentication, the web client sends a message to retrieve the DVR settings (containing MAC address, firmware version, SMTP details (inc. password), admin/user login details):
+
+>00000000000000000000010000000e020000000000000000000014000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+The DVR responds with roughly twelve kilobytes of information.
+
+After replaying the request without any authentication, I realised that you **do not need to login to get the same response** when you send this packet. I confirmed this by connecting to my media server port from a remote VPS, sending the packet via netcat and seeing the response. I immediately blocked my media port after.
+
+It appears that the only purpose for the authentication protocol is to slow down dumb attackers trying to bruteforce the web client. (Note the use of "slow down", because a maximum of six alphanumeric characters will take no time to bruteforce.) As a result, I am not expecting H264 streaming to require authentication. However, this is good because there will be less code to write, and the purpose of this is to have a Raspberry Pi act as a proxy with proper authentication. 
