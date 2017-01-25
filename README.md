@@ -17,9 +17,11 @@ The purpose of this section is to detail the network messages sent in Swann's we
 
 The following observations can be reproduced using Wireshark captures with the capture filter `host [DVR IP] and port [MEDIA PORT (9000)]` while using the web client (default port 85). All communication with the DVR is made over TCP.
 
-A hex editor such as [hexed.it](hexed.it) will be very useful for interpreting the hexdumps below. In the case of hexed.it, remember to substitute the dummy characters (e.g., `X`) for real hex values and when pasting the data, specify that the data should be interpreted as hexadecimal.
+Useful tools:
 
-You will also find that an ASCII to Hex converter may be useful. I recommend [asciitohex.com](http://www.asciitohex.com/).
+- A hex editor such as [hexed.it](hexed.it) will be very useful for interpreting the hexdumps below. In the case of hexed.it, remember to substitute the dummy characters (e.g., `X`) for real hex values and when pasting the data, specify that the data should be interpreted as hexadecimal.
+- You will also find that an ASCII to Hex converter may be useful. I recommend [asciitohex.com](http://www.asciitohex.com/).
+- The command `echo '[INPUT]' | xxd -r -p | nc [DVR IP] [MEDIA PORT]` will be very useful as you can immediately reproduce the below messages by directly replacing `[INPUT]` with the quoted messages.
 
 The below research is in chronological order. Interesting revelations are made throughout.
 
@@ -82,4 +84,29 @@ The DVR responds with roughly twelve kilobytes of information.
 
 After replaying the request without any authentication, I realised that you **do not need to login to get the same response** when you send this packet. I confirmed this by connecting to my media server port from a remote VPS, sending the packet via netcat and seeing the response. I immediately blocked my media port after.
 
-It appears that the only purpose for the authentication protocol is to slow down dumb attackers trying to bruteforce the web client. (Note the use of "slow down", because a maximum of six alphanumeric characters will take no time to bruteforce.) As a result, I am not expecting H264 streaming to require authentication. However, this is good because there will be less code to write, and the purpose of this is to have a Raspberry Pi act as a proxy with proper authentication. 
+It appears that the only purpose for the authentication protocol is to slow down dumb attackers trying to bruteforce the web client. (Note the use of "slow down", because a maximum of six alphanumeric characters will take no time to bruteforce.) As a result, I am not expecting H264 streaming to require authentication. However, this is good because there will be less code to write, and the purpose of this is to have a Raspberry Pi act as a proxy with proper authentication.
+
+---
+
+### Camera Stream (2017-01-25)
+
+Following on from the last section, I was incorrect in assuming that H264 streaming does not require authentication. That being said, an attacker can use the above method to get the credentials first, defeating the point of the below authentication process.
+
+The following message returns a camera stream:
+
+>00000000000000000000010000000300000000000000000000006800000001000000100000000**N**0000000100000000**UUUUUUUUUU**000000000000000000000000000001000000000000010124000000**PPPPPPPPPPPP**00009cc9c805000000000400010004000000a8c9c80500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+Notice the following variables:
+- **U** and **P** are as before (username and password)
+- **N** is your camera channel. This can be `1`, `2`, `4`, `8`, for channels 1, 2, 3 and 4 respectively
+
+If the authentication fails, the DVR will return `08 00 00 00 04 00 00 00`. 
+
+If the authentication succeeds, the following messages are sent in the following order:
+- 8 bytes: `1000000000000000`
+- A 1460 byte packet containing the camera stream, with the characters `MDVR96NT` near the start as well as `00dcH264`. This is followed up by packets of varying size (mostly 1460 bytes) containing the camera stream, which is received until the connection is terminated
+
+When setting your camera channel to one which does not have a camera connected via BNC, the stream still works. However, you may see `31dcH264` a lot and if you use the `nc` command, you may repeatedly hear the system bell sound (probably due to the terminal displaying the bell character).
+
+
+
