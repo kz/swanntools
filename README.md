@@ -5,11 +5,19 @@ This repository is part of a long-term project to build a more secure system pig
 
 ## Roadmap
 
-Current task: Conduct research into authentication using Wireshark
-
 - [X] Create a Go script which can authenticate with the DVR via its media protocol
 - [ ] Add streaming of cameras to the script
-- [ ] Plan a method to stream the H264 stream to AWS/Azure in order to transcode, store and stream video
+    - [ ] Receive a continuous stream of a single channel
+    - [ ] Receive a continuous stream of multiple channels
+    - [ ] Implement a TCP proxy and test client
+- [ ] Plan a method to stream the H264 stream to ~~AWS/~~Azure in order to transcode, store and stream video
+    - Plan must involve creation of an interface to allow creation of an AWS script
+    - The [Azure/azure-sdk-for-go](https://github.com/Azure/azure-sdk-for-go) can be used to upload files to cold blob storage
+- [ ] Create a web client to consume the H264 stream
+    - React is the framework of choice (can also easily port to mobile clients using React Native)
+    - [nareix/joy4](https://github.com/nareix/joy4) could be used as a streaming server
+    - [keroserene/go-webrtc](https://github.com/keroserene/go-webrtc) looks useful as a WebRTC library
+- [ ] Create a script to transfer DVR HDD recordings (which are of much higher quality than live streams) to cold storage just in case the extra resolution is required (otherwise can fall back to stored live streams, e.g., if DVR HDD fails)
 
 ## Research Journal
 
