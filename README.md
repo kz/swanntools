@@ -25,7 +25,7 @@ The below directory listing explains the structure of this repository.
 
 - [X] Create a Go script which can authenticate with the DVR via its media protocol
 - [ ] Add streaming of cameras to the script
-    - [ ] Receive a continuous stream of a single channel
+    - [X] Receive a continuous stream of a single channel
     - [ ] Receive a continuous stream of multiple channels
     - [ ] Implement a TCP proxy and test client
 - [ ] Plan a method to stream the H264 stream to ~~AWS/~~Azure in order to transcode, store and stream video
