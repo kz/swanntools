@@ -3,6 +3,22 @@ Capture tools for the Swann DVR4-1200 DVR (also known as DVR04B and DM70-D, manu
 
 This repository is part of a long-term project to build a more secure system piggybacking off the DVR4-1200 with cloud backups and much better web/mobile clients.
 
+## Structure
+
+The below directory listing explains the structure of this repository.
+
+```
+.
+├── src                       # Source files
+│   ├── authenticate.go       # Code to test the web panel login protocol of the DVR, made
+│   │                         # redundant as the DVR authenticates camera streaming separately
+│   ├── authenticate_test.go  # Test for authenticate.go
+│   ├── stream.go             # Receives a camera stream
+│── .gitignore
+├── LICENSE
+└── README.md
+```
+
 ## Roadmap
 
 - [X] Create a Go script which can authenticate with the DVR via its media protocol
