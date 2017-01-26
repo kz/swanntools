@@ -14,8 +14,8 @@ The below directory listing explains the structure of this repository.
 │   │                         # redundant as the DVR authenticates camera streaming separately
 │   ├── authenticate_test.go  # Test for authenticate.go
 │   ├── stream.go             # Receives a camera stream
-│── .gitignore
-├── LICENSE
+├── .gitignore
+├── LICENSE.md
 └── README.md
 ```
 
