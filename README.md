@@ -9,11 +9,13 @@ The below directory listing explains the structure of this repository.
 
 ```
 .
-├── src                       # Source files
-│   ├── authenticate.go       # Code to test the web panel login protocol of the DVR, made
-│   │                         # redundant as the DVR authenticates camera streaming separately
-│   ├── authenticate_test.go  # Test for authenticate.go
-│   ├── stream.go             # Receives a camera stream
+├── src                           # Source files
+│   ├── auth
+│   │   ├── authenticate.go       # Code to test the web panel login protocol of the DVR, made
+│   │   │                         # redundant as the DVR authenticates camera streaming separately
+│   │   └── authenticate_test.go  # Test for authenticate.go
+│   └── stream
+│       └── stream.go             # Receives a camera stream
 ├── .gitignore
 ├── LICENSE.md
 └── README.md
