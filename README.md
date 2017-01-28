@@ -15,9 +15,10 @@ The below directory listing explains the structure of this repository.
 │   │   ├── authenticate.go       
 │   │   │
 │   │   └── authenticate_test.go
-│   └── stream                    # Retrieves and forwards DVR camera streams
-│       ├── client.go             # Contains the client type and stream handler
-│       └── stream.go             # Command line point of entry; handles connection to the DVR
+│   └── client                    # Retrieves and forwards DVR camera streams to the server
+│       ├── client.go             # Handles forwarding of streams to server
+│       ├── main.go               # Command line point of entry
+│       └── stream.go             # Handles connection and receiving streams from the DVR
 ├── .gitignore
 ├── LICENSE.md
 └── README.md

@@ -10,7 +10,7 @@ const socketBufferSize = 1460
 
 // client represents the local machine sending the DVR stream
 type client struct {
-	// conn is the TCP connection
+	// conn is the TCP connection to the server
 	conn *net.TCPConn
 	// send is the channel on which messages are sent
 	send chan []byte
@@ -18,16 +18,16 @@ type client struct {
 	channel *int
 }
 
-// newClient makes a new client
-func newClient(channel *int) *client {
+// Client makes a new client
+func Client(channel *int) *client {
 	return &client{
 		send:    make(chan []byte, socketBufferSize),
 		channel: channel,
 	}
 }
 
-// handle handles events such as messages being sent
-func handle(c *client) {
+// Handle handles events such as messages being sent
+func Handle(c *client) {
 	for {
 		select {
 		case message := <-c.send:
