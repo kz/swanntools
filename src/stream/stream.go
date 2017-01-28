@@ -8,21 +8,24 @@ import (
 	"math"
 	"encoding/hex"
 	"bytes"
-	"log"
 )
 
 // Hex values of the byte arrays required in string form
 const (
-	InitStreamValues     = "00000000000000000000010000000300000000000000000000006800000001000000100000000N0000000100000000UUUUUUUUUU000000000000000000000000000001000000000000010124000000PPPPPPPPPPPP00009cc9c805000000000400010004000000a8c9c80500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-	SuccessfulAuthValues = "1000000000000000"
-	FailedAuthValues     = "0800000004000000"
+	initStreamValues     = "00000000000000000000010000000300000000000000000000006800000001000000100000000N0000000100000000UUUUUUUUUU000000000000000000000000000001000000000000010124000000PPPPPPPPPPPP00009cc9c805000000000400010004000000a8c9c80500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+	successfulAuthValues = "1000000000000000"
+	failedAuthValues     = "0800000004000000"
 )
 
 // Initialize flag variables
-var dest string
-var user string
-var pass string
-var channel int
+var (
+	addr *net.TCPAddr
+	dest string
+	user string
+	pass string
+	// TODO: global channel variable will be deprecated in favor of allowing multiple channel streams
+	channel int
+)
 
 func main() {
 	// Retrieve the command line flags
@@ -41,12 +44,22 @@ func main() {
 	// Convert channel from 1, 2, 3, 4 to 1, 2, 4, 8 respectively
 	channel = int(math.Exp2(float64(channel)))
 
+	// Resolve the TCP address
+	fmt.Fprintln(os.Stdout, "Resolving TCP address.")
+	tcpAddr, err := net.ResolveTCPAddr("tcp", dest)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "ResolveTCPAddr failed: ", err.Error())
+		os.Exit(1)
+	}
+	addr = tcpAddr
+
+	// TODO: Handle multiple channels
 	// Retrieve the camera stream
-	cameraStream()
+	upload(newClient(&channel))
 }
 
 func initStreamBytes() []byte {
-	hexValues := InitStreamValues
+	hexValues := initStreamValues
 
 	channelStartPos := 77
 	channelEndPos := 78
@@ -72,26 +85,20 @@ func initStreamBytes() []byte {
 	return byteArray
 }
 
-func cameraStream() {
-	// Get the TCP address
-	fmt.Fprintln(os.Stdout, "Establishing TCP connection.")
-	tcpAddr, err := net.ResolveTCPAddr("tcp", dest)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "ResolveTCPAddr failed: ", err.Error())
-		os.Exit(1)
-	}
-
+// upload continuously uploads a DVR stream to the client
+func upload(c *client) {
 	// Set up the stream connection
-	conn, err := net.DialTCP("tcp", nil, tcpAddr)
+	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Dial failed:", err.Error())
 		os.Exit(1)
 	}
-	defer conn.Close()
+	c.conn = conn
+	defer c.conn.Close()
 
 	// Send the stream initialization byte array
 	fmt.Fprintln(os.Stdout, "Sending stream initialization byte array.")
-	_, err = conn.Write(initStreamBytes())
+	_, err = c.conn.Write(initStreamBytes())
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Writing stream init to server failed: ", err.Error())
 		os.Exit(1)
@@ -99,14 +106,14 @@ func cameraStream() {
 
 	// Check authentication response
 	data := make([]byte, 8)
-	_, err = conn.Read(data)
+	_, err = c.conn.Read(data)
 	if err != nil {
 		panic(err)
 	}
 
 	// Check if authenticated
-	successfulAuthBytes, _ := hex.DecodeString(SuccessfulAuthValues)
-	failedAuthBytes, _ := hex.DecodeString(FailedAuthValues)
+	successfulAuthBytes, _ := hex.DecodeString(successfulAuthValues)
+	failedAuthBytes, _ := hex.DecodeString(failedAuthValues)
 	if bytes.Equal(data, successfulAuthBytes) {
 		fmt.Fprintln(os.Stdout, "Successfully logged in!")
 	} else if bytes.Equal(data, failedAuthBytes) {
@@ -117,16 +124,17 @@ func cameraStream() {
 		os.Exit(1)
 	}
 
+	// Start the handler to receive messages
+	go handle(c)
+
 	// Get the main camera stream
-	buf := &bytes.Buffer{}
 	for {
-		data := make([]byte, 1460)
-		n, err := conn.Read(data)
+		data := make([]byte, socketBufferSize)
+		n, err := c.conn.Read(data)
 		if err != nil {
 			panic(err)
 		}
-		buf.Write(data[:n])
-		log.Printf("Sent:\n%v", hex.Dump(data[:n]))
-	}
 
+		c.send <- data[:n]
+	}
 }

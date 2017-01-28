@@ -10,12 +10,14 @@ The below directory listing explains the structure of this repository.
 ```
 .
 ├── src                           # Source files
-│   ├── auth
-│   │   ├── authenticate.go       # Code to test the web panel login protocol of the DVR, made
-│   │   │                         # redundant as the DVR authenticates camera streaming separately
-│   │   └── authenticate_test.go  # Test for authenticate.go
-│   └── stream
-│       └── stream.go             # Receives a camera stream
+│   ├── auth                      # Miscellaneous code to test the web panel login protocol of the DVR,
+│   │   │                         # made redundant as the DVR authenticates camera streaming separately
+│   │   ├── authenticate.go       
+│   │   │
+│   │   └── authenticate_test.go
+│   └── stream                    # Retrieves and forwards DVR camera streams
+│       ├── client.go             # Contains the client type and stream handler
+│       └── stream.go             # Command line point of entry; handles connection to the DVR
 ├── .gitignore
 ├── LICENSE.md
 └── README.md
@@ -27,7 +29,9 @@ The below directory listing explains the structure of this repository.
 - [ ] Add streaming of cameras to the script
     - [X] Receive a continuous stream of a single channel
     - [ ] Receive a continuous stream of multiple channels
-    - [ ] Implement a TCP proxy and test client
+    - [ ] Implement a TCP proxy
+        - [X] Implement a client
+        - [ ] Implement a server
 - [ ] Plan a method to stream the H264 stream to ~~AWS/~~Azure in order to transcode, store and stream video
     - Plan must involve creation of an interface to allow creation of an AWS script
     - The [Azure/azure-sdk-for-go](https://github.com/Azure/azure-sdk-for-go) can be used to upload files to cold blob storage
