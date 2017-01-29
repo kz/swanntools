@@ -53,6 +53,7 @@ Useful tools:
 - A hex editor such as [hexed.it](hexed.it) will be very useful for interpreting the hexdumps below. In the case of hexed.it, remember to substitute the dummy characters (e.g., `X`) for real hex values and when pasting the data, specify that the data should be interpreted as hexadecimal.
 - You will also find that an ASCII to Hex converter may be useful. I recommend [asciitohex.com](http://www.asciitohex.com/).
 - The command `echo '[INPUT]' | xxd -r -p | nc [DVR IP] [MEDIA PORT]` will be very useful as you can immediately reproduce the below messages by directly replacing `[INPUT]` with the quoted messages.
+- If you have VLC installed, `vlc --demux=h264 [FILE]` can play raw camera streams
 
 The below research is in chronological order. Interesting revelations are made throughout.
 
