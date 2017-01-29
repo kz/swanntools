@@ -19,10 +19,10 @@ type client struct {
 }
 
 // Client makes a new client
-func Client(channel *int) *client {
+func Client(channel int) *client {
 	return &client{
 		send:    make(chan []byte, socketBufferSize),
-		channel: channel,
+		channel: &channel,
 	}
 }
 

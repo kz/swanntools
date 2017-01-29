@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"os"
 	"bytes"
+	"log"
+	"strconv"
 )
 
 // Hex values of the byte arrays required in string form
@@ -99,12 +101,13 @@ func initStreamBytes(s *stream) []byte {
 }
 
 // StreamToServer streams the video to the server
-func StreamToServer(c *client, channel *int) {
+func StreamToServer(channel int, c *client) {
+	defer wg.Done()
+
 	s := &stream{
-		channel: channel,
+		channel: &channel,
 	}
 	setUpStreamConnection(s)
-
 	defer s.conn.Close()
 
 	// Start the handler to receive messages
@@ -122,12 +125,28 @@ func StreamToServer(c *client, channel *int) {
 	}
 }
 
-func StreamToStdout(channel *int) {
+func StreamToFile(channel int) {
+	defer wg.Done()
+
+	// Attempt to create output file
+	fileName := "swann_" + strconv.Itoa(channel)
+	file, err := os.Create(fileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Open file for writing to pipe
+	file, err = os.OpenFile(fileName, os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	print("Writing to: " + fileName)
+	defer file.Close()
+
 	s := &stream{
-		channel: channel,
+		channel: &channel,
 	}
 	setUpStreamConnection(s)
-
 	defer s.conn.Close()
 
 	for {
@@ -137,6 +156,6 @@ func StreamToStdout(channel *int) {
 			panic(err)
 		}
 
-		fmt.Fprintf(os.Stdout, "%s", data[:n])
+		file.Write(data[:n])
 	}
 }

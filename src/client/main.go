@@ -8,6 +8,7 @@ import (
 	"math"
 	"strings"
 	"strconv"
+	"sync"
 )
 
 const maxChannels = 4
@@ -19,6 +20,7 @@ var (
 	user     string
 	pass     string
 	channels []int
+	wg       sync.WaitGroup
 )
 
 func main() {
@@ -67,8 +69,9 @@ func main() {
 
 	// Retrieve the camera streams
 	for _, channel := range channels {
-		// TODO: Possible GC'd pointer
-		// TODO: Single stream blocks other streams; consider using goroutines and preventing termination
-		StreamToStdout(&channel)
+		wg.Add(1)
+		go StreamToFile(channel)
 	}
+
+	wg.Wait()
 }

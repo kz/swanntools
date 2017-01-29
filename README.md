@@ -29,7 +29,7 @@ The below directory listing explains the structure of this repository.
 - [X] Create a Go script which can authenticate with the DVR via its media protocol
 - [ ] Add streaming of cameras to the script
     - [X] Receive a continuous stream of a single channel
-    - [ ] Receive a continuous stream of multiple channels
+    - [X] Receive a continuous stream of multiple channels
     - [ ] Implement a TCP proxy
         - [X] Implement a client
         - [ ] Implement a server
