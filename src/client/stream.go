@@ -101,7 +101,7 @@ func initStreamBytes(s *stream) []byte {
 }
 
 // StreamToServer streams the video to the server
-func StreamToServer(channel int, c *client) {
+func StreamToServer(channel int) {
 	defer wg.Done()
 
 	s := &stream{
@@ -109,6 +109,9 @@ func StreamToServer(channel int, c *client) {
 	}
 	setUpStreamConnection(s)
 	defer s.conn.Close()
+
+	// Add a client
+	c := Client(channel)
 
 	// Start the handler to receive messages
 	go Handle(c)
@@ -125,6 +128,26 @@ func StreamToServer(channel int, c *client) {
 	}
 }
 
+func StreamToStdout(channel int) {
+	defer wg.Done()
+
+	s := &stream{
+		channel: &channel,
+	}
+	setUpStreamConnection(s)
+	defer s.conn.Close()
+
+	for {
+		data := make([]byte, socketBufferSize)
+		n, err := s.conn.Read(data)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Fprintf(os.Stdout, "%s", data[:n])
+	}
+}
+
 func StreamToFile(channel int) {
 	defer wg.Done()
 
@@ -135,7 +158,7 @@ func StreamToFile(channel int) {
 		log.Fatal(err)
 	}
 
-	// Open file for writing to pipe
+	// Open file for writing
 	file, err = os.OpenFile(fileName, os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)

@@ -70,7 +70,7 @@ func main() {
 	// Retrieve the camera streams
 	for _, channel := range channels {
 		wg.Add(1)
-		go StreamToFile(channel)
+		go StreamToServer(channel)
 	}
 
 	wg.Wait()

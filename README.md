@@ -24,6 +24,10 @@ The below directory listing explains the structure of this repository.
 └── README.md
 ```
 
+## Known Bugs
+
+- Pressing Ctrl + C does not terminate main.exe
+
 ## Roadmap
 
 - [X] Create a Go script which can authenticate with the DVR via its media protocol
