@@ -7,7 +7,7 @@ import (
 	"net"
 	"math"
 	"strings"
-	"unicode"
+	"strconv"
 )
 
 const maxChannels = 4
@@ -39,15 +39,16 @@ func main() {
 	// Parse the channel input
 	channelSlice := strings.Split(*channelInput, ",")
 	for i, channel := range channelSlice {
+		intChannel, err := strconv.Atoi(channel)
 		if i >= maxChannels {
 			fmt.Fprintln(os.Stderr, "You cannot have greater than %d streams", maxChannels)
 			os.Exit(1)
-		} else if !unicode.IsDigit(rune(channel)) {
+		} else if err != nil || intChannel > maxChannels {
 			fmt.Fprintln(os.Stderr, "All channels need to be a number between 1 and %d", maxChannels)
 			os.Exit(1)
 		}
 		// Convert channel from 1, 2, 3, 4 to 1, 2, 4, 8 respectively
-		parsedChannel := int(math.Exp2(float64(int(channel) - 1)))
+		parsedChannel := int(math.Exp2(float64(intChannel - 1)))
 		if intInSlice(&parsedChannel, &channels) {
 			fmt.Fprintln(os.Stderr, "All channels need to be unique", maxChannels)
 			os.Exit(1)

@@ -40,7 +40,7 @@ func setUpStreamConnection(s *stream) {
 
 	// Send the stream initialization byte array
 	fmt.Fprintln(os.Stdout, "Sending stream initialization byte array.")
-	_, err = s.conn.Write(initStreamBytes())
+	_, err = s.conn.Write(initStreamBytes(s))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Writing stream init to server failed: ", err.Error())
 		os.Exit(1)
@@ -71,12 +71,12 @@ func setUpStreamConnection(s *stream) {
 }
 
 // initStreamBytes returns the byte array required to initialize a stream
-func initStreamBytes() []byte {
+func initStreamBytes(s *stream) []byte {
 	hexValues := initStreamValues
 
 	channelStartPos := 77
 	channelEndPos := 78
-	hexValues = hexValues[:channelStartPos] + fmt.Sprintf("%d", int(channel)) + hexValues[channelEndPos:]
+	hexValues = hexValues[:channelStartPos] + fmt.Sprintf("%d", int(*s.channel)) + hexValues[channelEndPos:]
 
 	for i, v := range user {
 		startPos := 94 + 2*i
