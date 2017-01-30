@@ -10,15 +10,17 @@ The below directory listing explains the structure of this repository.
 ```
 .
 ├── src                           # Source files
-│   ├── auth                      # Miscellaneous code to test the web panel login protocol of the DVR,
-│   │   │                         # made redundant as the DVR authenticates camera streaming separately
-│   │   ├── authenticate.go       
-│   │   │
-│   │   └── authenticate_test.go
-│   └── client                    # Retrieves and forwards DVR camera streams to the server
-│       ├── client.go             # Handles forwarding of streams to server
-│       ├── main.go               # Command line point of entry
-│       └── stream.go             # Handles connection and receiving streams from the DVR
+│   ├── client                    # Retrieves and forwards DVR camera streams to the server
+│   │   ├── client.go             # Handles forwarding of streams to server
+│   │   ├── main.go               # Command line point of entry
+│   │   └── stream.go             # Handles connection and receiving streams from the DVR
+│   ├── server
+│   │   └── main.go               # Command line point of entry
+│   └── misc
+│       └── auth                      # Miscellaneous code to test the web panel login protocol of the DVR,
+│           │                         # made redundant as the DVR authenticates camera streaming separately
+│           ├── authenticate.go       
+│           └── authenticate_test.go
 ├── .gitignore
 ├── LICENSE.md
 └── README.md
