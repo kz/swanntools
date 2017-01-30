@@ -33,7 +33,7 @@ func setUpStreamConnection(s *stream) {
 	}
 
 	// Set up a new connection
-	conn, err := net.DialTCP("tcp", nil, addr)
+	conn, err := net.DialTCP("tcp", nil, source)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Dial failed:", err.Error())
 		os.Exit(1)

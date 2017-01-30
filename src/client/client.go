@@ -20,7 +20,11 @@ type client struct {
 
 // Client makes a new client
 func Client(channel int) *client {
+	// TODO: Initialize a TCP connection with the server and send a message with the channel number
+		// TODO: Create a function to do this
+
 	return &client{
+		// TODO: Add TCP connection
 		send:    make(chan []byte, socketBufferSize),
 		channel: &channel,
 	}
