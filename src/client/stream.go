@@ -33,7 +33,7 @@ func setUpStreamConnection(s *stream) {
 	}
 
 	// Set up a new connection
-	conn, err := net.DialTCP("tcp", nil, source)
+	conn, err := net.DialTCP("tcp", nil, config.source)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Dial failed:", err.Error())
 		os.Exit(1)
@@ -80,13 +80,13 @@ func initStreamBytes(s *stream) []byte {
 	channelEndPos := 78
 	hexValues = hexValues[:channelStartPos] + fmt.Sprintf("%d", int(*s.channel)) + hexValues[channelEndPos:]
 
-	for i, v := range user {
+	for i, v := range config.user {
 		startPos := 94 + 2*i
 		endPos := 96 + 2*i
 		hexValues = hexValues[:startPos] + fmt.Sprintf("%x", int(v)) + hexValues[endPos:]
 	}
 
-	for i, v := range pass {
+	for i, v := range config.pass {
 		startPos := 158 + 2*i
 		endPos := 160 + 2*i
 		hexValues = hexValues[:startPos] + fmt.Sprintf("%x", int(v)) + hexValues[endPos:]
