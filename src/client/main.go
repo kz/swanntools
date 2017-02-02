@@ -22,7 +22,7 @@ type Config struct {
 	user     string
 	pass     string
 	channels []int
-	cert     []byte
+	certs    string
 }
 
 // Initialize global variables
@@ -41,53 +41,26 @@ func main() {
 	sourceInput := fs.String("source", "", "The address of the DVR in the format host:port")
 	destInput := fs.String("dest", "", "The address of the streaming server in the format host:port")
 	channelInput := fs.String("channels", "", "Channel(s) to stream, delimited by commas")
-	certInput := fs.String("cert", "", "Absolute file path to the server certificate")
+	certsInput := fs.String("certs", "", "Absolute file path to the certificate folder")
 
 	fs.Parse(os.Args[1:])
 
 	// Ensure that the command line flags are not empty
 	if *userInput == "" || *passInput == "" || *sourceInput == "" || *destInput == "" ||
-		*channelInput == "" || *certInput == "" {
+		*channelInput == "" || *certsInput == "" {
 		fs.PrintDefaults()
 		os.Exit(1)
 	}
 	config.user = *userInput
 	config.pass = *passInput
 
-	// Parse the channel input
-	channelSlice := strings.Split(*channelInput, ",")
-	for i, channel := range channelSlice {
-		intChannel, err := strconv.Atoi(channel)
-		if i >= maxChannels {
-			fmt.Fprintln(os.Stderr, "You cannot have greater than %d streams", maxChannels)
-			os.Exit(1)
-		} else if err != nil || intChannel > maxChannels {
-			fmt.Fprintln(os.Stderr, "All channels need to be a number between 1 and %d", maxChannels)
-			os.Exit(1)
-		}
-		// Convert channel from 1, 2, 3, 4 to 1, 2, 4, 8 respectively
-		parsedChannel := int(math.Exp2(float64(intChannel - 1)))
-		if intInSlice(&parsedChannel, &config.channels) {
-			fmt.Fprintln(os.Stderr, "All channels need to be unique", maxChannels)
-			os.Exit(1)
-		}
-		config.channels = append(config.channels, parsedChannel)
-	}
+	// Ensure that the certificates exist at the location
+	for _, file := range []string{"client.key", "client.pem", "server.key", "server.pem"} {
+		if _, err := os.Stat(*certsInput + "/" + file); err != nil {
 
-	// Read the certificate file
-	cert, err := ioutil.ReadFile(*certInput)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Certificate file could not be opened")
-		os.Exit(1)
+		}
 	}
-
-	// Attempt to parse the PEM bytes
-	certPool := x509.NewCertPool()
-	if pemStatus := certPool.AppendCertsFromPEM(cert); !pemStatus {
-		fmt.Fprintln(os.Stderr, "Certificate file could not be parsed")
-		os.Exit(1)
-	}
-	config.cert = cert
+	config.certs = *certsInput
 
 	// Resolve the TCP addresses
 	tcpAddr, err := net.ResolveTCPAddr("tcp", *sourceInput)

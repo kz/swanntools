@@ -27,7 +27,7 @@ The below directory listing explains the structure of this repository.
 ```
 
 ## Installation
-Generate the required certificates for TLS by running: `openssl genrsa -out server.key 2048 && openssl req -new -x509 -sha256 -key server.key -out server.crt -days 3650`
+The program requires a folder created  with certificate files with file names `client.pem`, `client.key`, `server.pem` and `server.key`. Navigate to a new folder of your choice and generate the required certificates for TLS by running: `openssl req -new -nodes -x509 -out client.pem -keyout client.key && openssl req -new -nodes -x509 -out server.pem -keyout server.key`
 
 ## Known Bugs
 

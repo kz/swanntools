@@ -1,5 +1,7 @@
-server.crt
+server.pem
 server.key
+client.key
+client.pem
 
 # Created by .ignore support plugin (hsz.mobi)
 ### JetBrains template

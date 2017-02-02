@@ -6,14 +6,17 @@ import (
 	"log"
 	"fmt"
 	"os"
+	"crypto/x509"
+	"crypto/tls"
+	"io/ioutil"
 )
 
 const socketBufferSize = 1460
 
 // client represents the local machine sending the DVR stream
 type client struct {
-	// conn is the TCP connection to the server
-	conn *net.TCPConn
+	// conn is the TCP (w/ TLS) connection to the server
+	conn *tls.Conn
 	// send is the channel on which messages are sent
 	send chan []byte
 	// channel is the channel number of the stream
@@ -44,14 +47,35 @@ func Handle(c *client) {
 }
 
 func setUpServerConnection(c *client) {
-	// Set up a new connection
-	conn, err := net.DialTCP("tcp", nil, config.source)
+	// Load client key pair
+	cert, err := tls.LoadX509KeyPair(config.certs+"/client.pem", config.certs+"/client.key")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Unable to load client key pair")
+		os.Exit(1)
+	}
+
+	// Read the server certificate
+	serverCert, err := ioutil.ReadFile(config.certs + "/server.pem")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Unable to read server certificate file")
+		os.Exit(1)
+	}
+	roots := x509.NewCertPool()
+	roots.AppendCertsFromPEM(serverCert)
+
+	// Add both certificates to the TLS config
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      roots,
+	}
+
+	// Create a new connection
+	conn, err := tls.Dial("tcp", "127.0.0.1:443", tlsConfig)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Dial failed:", err.Error())
 		os.Exit(1)
 	}
 	c.conn = conn
-
 
 	// TODO: Authentication
 	// Send the channel number to initialize the stream
