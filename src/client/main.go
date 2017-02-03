@@ -5,12 +5,10 @@ import (
 	"github.com/namsral/flag"
 	"fmt"
 	"net"
-	"math"
-	"strings"
-	"strconv"
 	"sync"
-	"io/ioutil"
-	"crypto/x509"
+	"strings"
+	"math"
+	"strconv"
 )
 
 const maxChannels = 4
@@ -54,10 +52,31 @@ func main() {
 	config.user = *userInput
 	config.pass = *passInput
 
+	// Parse the channel input
+	channelSlice := strings.Split(*channelInput, ",")
+	for i, channel := range channelSlice {
+		intChannel, err := strconv.Atoi(channel)
+		if i >= maxChannels {
+			fmt.Fprintln(os.Stderr, "You cannot have greater than %d streams", maxChannels)
+			os.Exit(1)
+		} else if err != nil || intChannel > maxChannels {
+			fmt.Fprintln(os.Stderr, "All channels need to be a number between 1 and %d", maxChannels)
+			os.Exit(1)
+		}
+		// Convert channel from 1, 2, 3, 4 to 1, 2, 4, 8 respectively
+		parsedChannel := int(math.Exp2(float64(intChannel - 1)))
+		if intInSlice(&parsedChannel, &config.channels) {
+			fmt.Fprintln(os.Stderr, "All channels need to be unique", maxChannels)
+			os.Exit(1)
+		}
+		config.channels = append(config.channels, parsedChannel)
+	}
+
 	// Ensure that the certificates exist at the location
 	for _, file := range []string{"client.key", "client.pem", "server.key", "server.pem"} {
 		if _, err := os.Stat(*certsInput + "/" + file); err != nil {
-
+			fmt.Fprintln(os.Stderr, "Unable to stat certificates: ", err.Error())
+			os.Exit(1)
 		}
 	}
 	config.certs = *certsInput
