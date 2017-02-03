@@ -1,7 +1,6 @@
 package main
 
 import (
-	"net"
 	"encoding/hex"
 	"log"
 	"fmt"
@@ -24,14 +23,11 @@ type client struct {
 }
 
 // Client makes a new client
-func Client(channel int) *client {
-	// TODO: Initialize a TCP connection with the server and send a message with the channel number
-	// TODO: Create a function to do this
-
+func Client(channel *int) *client {
 	return &client{
-		// TODO: Add TCP connection
+		conn:    newServerConnection(channel),
 		send:    make(chan []byte, socketBufferSize),
-		channel: &channel,
+		channel: channel,
 	}
 }
 
@@ -46,7 +42,7 @@ func Handle(c *client) {
 	}
 }
 
-func setUpServerConnection(c *client) {
+func newServerConnection(channel *int) *tls.Conn {
 	// Load client key pair
 	cert, err := tls.LoadX509KeyPair(config.certs+"/client.pem", config.certs+"/client.key")
 	if err != nil {
@@ -65,24 +61,31 @@ func setUpServerConnection(c *client) {
 
 	// Add both certificates to the TLS config
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      roots,
+		// TODO: Generate CA-signed certificates instead
+		InsecureSkipVerify: true,
+		Certificates:       []tls.Certificate{cert},
+		RootCAs:            roots,
 	}
 
 	// Create a new connection
-	conn, err := tls.Dial("tcp", "127.0.0.1:443", tlsConfig)
+	conn, err := tls.Dial("tcp", config.dest.String(), tlsConfig)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Dial failed:", err.Error())
 		os.Exit(1)
 	}
-	c.conn = conn
 
 	// TODO: Authentication
-	// Send the channel number to initialize the stream
+	// Send the channel number along with login details
 	fmt.Fprintln(os.Stdout, "Sending stream initialization byte array.")
-	_, err = c.conn.Write([]byte(""))
+	// TODO: Change below to send channel number + login details
+	_, err = conn.Write([]byte("Hello world!\n"))
 	if err != nil {
+		conn.Close()
 		fmt.Fprintln(os.Stderr, "Writing stream init to server failed: ", err.Error())
 		os.Exit(1)
 	}
+
+	// Verify the server response
+
+	return conn
 }

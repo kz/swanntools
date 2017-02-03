@@ -17,32 +17,18 @@ const (
 	failedAuthValues     = "0800000004000000"
 )
 
-// stream represents the DVR camera stream
-type stream struct {
-	// conn is the TCP connection to the DVR
-	conn *net.TCPConn
-	// channel is the channel number of the stream
-	channel *int
-}
-
-// setUpStreamConnection creates a new TCP connection
-func setUpStreamConnection(s *stream) {
-	// Attempt to close any existing TCP connections
-	if s.conn != nil {
-		s.conn.Close()
-	}
-
+// newStreamConnection creates and sets up a new TCP connection
+func newStreamConnection(channel *int) *net.TCPConn {
 	// Set up a new connection
 	conn, err := net.DialTCP("tcp", nil, config.source)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Dial failed:", err.Error())
 		os.Exit(1)
 	}
-	s.conn = conn
 
 	// Send the stream initialization byte array
 	fmt.Fprintln(os.Stdout, "Sending stream initialization byte array.")
-	_, err = s.conn.Write(initStreamBytes(s))
+	_, err = conn.Write(initStreamBytes(channel))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Writing stream init to server failed: ", err.Error())
 		os.Exit(1)
@@ -50,7 +36,7 @@ func setUpStreamConnection(s *stream) {
 
 	// Check authentication response
 	data := make([]byte, 8)
-	_, err = s.conn.Read(data)
+	_, err = conn.Read(data)
 	if err != nil {
 		panic(err)
 	}
@@ -68,17 +54,17 @@ func setUpStreamConnection(s *stream) {
 		os.Exit(1)
 	}
 
-	// Add the connection to the stream
-	s.conn = conn
+	// Return the stream
+	return conn
 }
 
 // initStreamBytes returns the byte array required to initialize a stream
-func initStreamBytes(s *stream) []byte {
+func initStreamBytes(channel *int) []byte {
 	hexValues := initStreamValues
 
 	channelStartPos := 77
 	channelEndPos := 78
-	hexValues = hexValues[:channelStartPos] + fmt.Sprintf("%d", int(*s.channel)) + hexValues[channelEndPos:]
+	hexValues = hexValues[:channelStartPos] + fmt.Sprintf("%d", int(*channel)) + hexValues[channelEndPos:]
 
 	for i, v := range config.user {
 		startPos := 94 + 2*i
@@ -101,25 +87,22 @@ func initStreamBytes(s *stream) []byte {
 }
 
 // StreamToServer streams the video to the server
-func StreamToServer(channel int) {
+func StreamToServer(channel *int) {
 	defer wg.Done()
 
-	s := &stream{
-		channel: &channel,
-	}
-	setUpStreamConnection(s)
-	defer s.conn.Close()
+	conn := newStreamConnection(channel)
+	defer conn.Close()
 
-	// Add a client
+	// Create a client
 	c := Client(channel)
 
-	// Start the handler to receive messages
+	// Start the client handler to receive messages
 	go Handle(c)
 
 	// Get the main camera stream
 	for {
 		data := make([]byte, socketBufferSize)
-		n, err := s.conn.Read(data)
+		n, err := conn.Read(data)
 		if err != nil {
 			panic(err)
 		}
@@ -128,18 +111,15 @@ func StreamToServer(channel int) {
 	}
 }
 
-func StreamToStdout(channel int) {
+func StreamToStdout(channel *int) {
 	defer wg.Done()
 
-	s := &stream{
-		channel: &channel,
-	}
-	setUpStreamConnection(s)
-	defer s.conn.Close()
+	conn := newStreamConnection(channel)
+	defer conn.Close()
 
 	for {
 		data := make([]byte, socketBufferSize)
-		n, err := s.conn.Read(data)
+		n, err := conn.Read(data)
 		if err != nil {
 			panic(err)
 		}
@@ -148,11 +128,11 @@ func StreamToStdout(channel int) {
 	}
 }
 
-func StreamToFile(channel int) {
+func StreamToFile(channel *int) {
 	defer wg.Done()
 
 	// Attempt to create output file
-	fileName := "swann_" + strconv.Itoa(channel)
+	fileName := "swann_" + strconv.Itoa(*channel)
 	file, err := os.Create(fileName)
 	if err != nil {
 		log.Fatal(err)
@@ -166,15 +146,12 @@ func StreamToFile(channel int) {
 	print("Writing to: " + fileName)
 	defer file.Close()
 
-	s := &stream{
-		channel: &channel,
-	}
-	setUpStreamConnection(s)
-	defer s.conn.Close()
+	conn := newStreamConnection(channel)
+	defer conn.Close()
 
 	for {
 		data := make([]byte, socketBufferSize)
-		n, err := s.conn.Read(data)
+		n, err := conn.Read(data)
 		if err != nil {
 			panic(err)
 		}

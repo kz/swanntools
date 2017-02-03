@@ -98,7 +98,7 @@ func main() {
 	// Retrieve the camera streams
 	for _, channel := range config.channels {
 		wg.Add(1)
-		go StreamToServer(channel)
+		go StreamToServer(&channel)
 	}
 
 	wg.Wait()

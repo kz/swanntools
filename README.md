@@ -15,7 +15,8 @@ The below directory listing explains the structure of this repository.
 │   │   ├── main.go               # Command line point of entry
 │   │   └── stream.go             # Handles connection and receiving streams from the DVR
 │   ├── server
-│   │   └── main.go               # Command line point of entry
+│   │   ├── main.go               # Command line point of entry
+│   │   └── server.go             # Handles listening to connections 
 │   └── misc
 │       └── auth                      # Miscellaneous code to test the web panel login protocol of the DVR,
 │           │                         # made redundant as the DVR authenticates camera streaming separately
