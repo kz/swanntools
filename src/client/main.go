@@ -76,7 +76,7 @@ func main() {
 	}
 
 	// Ensure that the certificates exist at the location
-	for _, file := range []string{"client.key", "client.pem", "server.key", "server.pem"} {
+	for _, file := range []string{"client.key", "client.pem", "server.pem"} {
 		if _, err := os.Stat(*certsInput + "/" + file); err != nil {
 			fmt.Fprintln(os.Stderr, "Unable to stat certificates: ", err.Error())
 			os.Exit(1)
