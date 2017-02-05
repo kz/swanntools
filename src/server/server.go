@@ -27,6 +27,7 @@ func StartListener() {
 	}
 
 	for {
+		print("ready")
 		// TODO: Use Mutexes to protect channels from simultaneous writes
 		conn, err := listener.Accept()
 		if err != nil {
@@ -40,9 +41,10 @@ func handleConn(conn net.Conn) {
 	defer conn.Close()
 	r := bufio.NewReader(conn)
 
-	isAuthenticated := false
-	var channel int
+	//isAuthenticated := false
+	//var channel int
 
+	print("Handling")
 	for {
 		// TODO: Switch to handle authentication
 		// If unauthenticated:

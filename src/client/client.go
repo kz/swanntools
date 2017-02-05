@@ -1,13 +1,12 @@
 package main
 
 import (
-	"encoding/hex"
-	"log"
 	"fmt"
 	"os"
 	"crypto/x509"
 	"crypto/tls"
 	"io/ioutil"
+	"strconv"
 )
 
 const socketBufferSize = 1460
@@ -37,7 +36,8 @@ func Handle(c *client) {
 		select {
 		case message := <-c.send:
 			// TODO: Send this to the server
-			log.Printf("Sent:\n%v", hex.Dump(message))
+			_ = message
+			//log.Printf("Sent:\n%v", hex.Dump(message))
 		}
 	}
 }
@@ -77,13 +77,13 @@ func newServerConnection(channel *int) *tls.Conn {
 	// TODO: Authentication
 	// Send the channel number along with login details
 	fmt.Fprintln(os.Stdout, "Sending stream initialization byte array.")
-	// TODO: Change below to send channel number + login details
-	_, err = conn.Write([]byte("Hello world!\n"))
+	_, err = conn.Write([]byte(strconv.Itoa(*channel) + config.key + "\n"))
 	if err != nil {
 		conn.Close()
 		fmt.Fprintln(os.Stderr, "Writing stream init to server failed: ", err.Error())
 		os.Exit(1)
 	}
+	conn.Close()
 
 	// Verify the server response
 

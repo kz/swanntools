@@ -19,6 +19,7 @@ type Config struct {
 	dest     *net.TCPAddr
 	user     string
 	pass     string
+	key      string
 	channels []int
 	certs    string
 }
@@ -36,6 +37,7 @@ func main() {
 	fs := flag.NewFlagSetWithEnvPrefix(os.Args[0], "SWANN", 0)
 	userInput := fs.String("user", "", "Username to authenticate with")
 	passInput := fs.String("pass", "", "Password to authenticate with")
+	keyInput := fs.String("key", "", "Passphrase to authenticate with the server")
 	sourceInput := fs.String("source", "", "The address of the DVR in the format host:port")
 	destInput := fs.String("dest", "", "The address of the streaming server in the format host:port")
 	channelInput := fs.String("channels", "", "Channel(s) to stream, delimited by commas")
@@ -44,13 +46,14 @@ func main() {
 	fs.Parse(os.Args[1:])
 
 	// Ensure that the command line flags are not empty
-	if *userInput == "" || *passInput == "" || *sourceInput == "" || *destInput == "" ||
+	if *userInput == "" || *passInput == "" || *keyInput == "" || *sourceInput == "" || *destInput == "" ||
 		*channelInput == "" || *certsInput == "" {
 		fs.PrintDefaults()
 		os.Exit(1)
 	}
 	config.user = *userInput
 	config.pass = *passInput
+	config.key = *keyInput
 
 	// Parse the channel input
 	channelSlice := strings.Split(*channelInput, ",")
@@ -96,9 +99,9 @@ func main() {
 	config.dest = tcpAddr
 
 	// Retrieve the camera streams
-	for _, channel := range config.channels {
+	for i := range config.channels {
 		wg.Add(1)
-		go StreamToServer(&channel)
+		go StreamToServer(&config.channels[i])
 	}
 
 	wg.Wait()
