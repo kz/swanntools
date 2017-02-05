@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"log"
 	"strconv"
+	"math"
 )
 
 // Hex values of the byte arrays required in string form
@@ -64,7 +65,9 @@ func initStreamBytes(channel *int) []byte {
 
 	channelStartPos := 77
 	channelEndPos := 78
-	hexValues = hexValues[:channelStartPos] + fmt.Sprintf("%d", int(*channel)) + hexValues[channelEndPos:]
+	// Convert channel from 1, 2, 3, 4 to 1, 2, 4, 8 respectively
+	parsedChannel := int(math.Exp2(float64(*channel - 1)))
+	hexValues = hexValues[:channelStartPos] + fmt.Sprintf("%d", parsedChannel) + hexValues[channelEndPos:]
 
 	for i, v := range config.user {
 		startPos := 94 + 2*i

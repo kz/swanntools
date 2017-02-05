@@ -66,13 +66,12 @@ func main() {
 			fmt.Fprintln(os.Stderr, "All channels need to be a number between 1 and %d", maxChannels)
 			os.Exit(1)
 		}
-		// Convert channel from 1, 2, 3, 4 to 1, 2, 4, 8 respectively
-		parsedChannel := int(math.Exp2(float64(intChannel - 1)))
-		if intInSlice(&parsedChannel, &config.channels) {
+
+		if intInSlice(&intChannel, &config.channels) {
 			fmt.Fprintln(os.Stderr, "All channels need to be unique", maxChannels)
 			os.Exit(1)
 		}
-		config.channels = append(config.channels, parsedChannel)
+		config.channels = append(config.channels, intChannel)
 	}
 
 	// Ensure that the certificates exist at the location
