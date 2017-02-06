@@ -9,7 +9,11 @@ import (
 	"strconv"
 )
 
-const socketBufferSize = 1460
+const (
+	socketBufferSize           = 1460
+	SuccessfulClientAuthString = "200"
+	FailedClientAuthString     = "403"
+)
 
 // client represents the local machine sending the DVR stream
 type client struct {
@@ -37,7 +41,7 @@ func Handle(c *client) {
 		case message := <-c.send:
 			// TODO: Send this to the server
 			_ = message
-			//log.Printf("Sent:\n%v", hex.Dump(message))
+		//log.Printf("Sent:\n%v", hex.Dump(message))
 		}
 	}
 }
@@ -74,7 +78,6 @@ func newServerConnection(channel *int) *tls.Conn {
 		os.Exit(1)
 	}
 
-	// TODO: Authentication
 	// Send the channel number along with login details
 	fmt.Fprintln(os.Stdout, "Sending stream initialization byte array.")
 	_, err = conn.Write([]byte(strconv.Itoa(*channel) + config.key + "\n"))
@@ -86,6 +89,22 @@ func newServerConnection(channel *int) *tls.Conn {
 	conn.Close()
 
 	// Verify the server response
+	// TODO: Add timeout
+	authResponse := make([]byte, 3)
+	_, err = conn.Read(authResponse)
+	if err != nil {
+		panic(err)
+	}
+
+	if string(authResponse) == SuccessfulClientAuthString {
+		fmt.Fprintln(os.Stdout, "Successfully authenticated with the server")
+	} else if string(authResponse) == FailedClientAuthString {
+		fmt.Fprintln(os.Stderr, "Authentication failed due to invalid credentials.")
+		os.Exit(1)
+	} else {
+		fmt.Fprintln(os.Stderr, "Authentication failed due to unknown reason.")
+		os.Exit(1)
+	}
 
 	return conn
 }
