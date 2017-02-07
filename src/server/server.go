@@ -45,11 +45,20 @@ func StartListener() {
 }
 
 func handleConn(conn net.Conn) {
-	defer conn.Close()
 	r := bufio.NewReader(conn)
 
 	isAuthenticated := false
 	var channel int
+
+	defer func(channel *int) {
+		conn.Close()
+		if channel != nil {
+			// Remove channel from channelsInUse if appropriate
+			if pos, isPresent := intPositionInSlice(channel, &channelsInUse); isPresent {
+				channelsInUse = append(channelsInUse[:pos], channelsInUse[pos+1:]...)
+			}
+		}
+	}(&channel)
 
 	for {
 		// TODO: Handle authentication
@@ -76,7 +85,6 @@ func handleConn(conn net.Conn) {
 
 			// Append the channel to slice of channels in use
 			channelsInUse = append(channelsInUse, channel)
-			// TODO: Add code to remove channel from channelsInUse
 		}
 	}
 }
