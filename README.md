@@ -33,7 +33,7 @@ The program requires a folder created  with certificate files with file names `c
 ## Known Bugs
 
 - Pressing Ctrl + C does not terminate main.exe
-- Placement of `OS.Exit(1)`s need to be reviewed so that only goroutines stop instead of the entire program
+- Placement of `OS.Exit(1)`s need to be reviewed so that only goroutines stop instead of the entire program on the client
 - Timeouts should be used
 
 ## Roadmap

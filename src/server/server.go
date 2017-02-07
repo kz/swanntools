@@ -20,20 +20,25 @@ func StartListener() {
 	// Load server key pair
 	cert, err := tls.LoadX509KeyPair(config.certs+"/server.pem", config.certs+"/server.key")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to load server key pair")
+		fmt.Fprintln(os.Stderr, "Unable to load server key pair: ", err.Error())
 		os.Exit(1)
 	}
+
 	// Add certificate to TLS config
 	tlsConfig := &tls.Config{Certificates: []tls.Certificate{cert}}
 
-	// TODO: Listen on flag
-	listener, err := tls.Listen("tcp", "127.0.0.1:4000", tlsConfig)
+	listener, err := tls.Listen("tcp", config.bindAddr.String(), tlsConfig)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to start TLS listener")
+		fmt.Fprintln(os.Stderr, "Unable to start TLS listener: ", err.Error())
 		os.Exit(1)
 	}
 
+	// Print debugging messages
+	fmt.Fprintln(os.Stdout, "Server listening on: %s", config.bindAddr)
+	println("Server listening for password:")
+	println(hex.Dump([]byte(config.key)))
 	println("Server ready")
+
 	for {
 		// TODO: Use Mutexes to protect channels from simultaneous writes
 		conn, err := listener.Accept()
@@ -79,12 +84,16 @@ func handleConn(conn net.Conn) {
 			// Send the response to the client
 			_, err := conn.Write([]byte(responseString))
 			if err != nil {
-				fmt.Fprintln(os.Stderr, "Unable to write response to client", err.Error())
+				fmt.Fprintln(os.Stderr, "Unable to write response to client: ", err.Error())
 				break
 			}
 
 			// Append the channel to slice of channels in use
-			channelsInUse = append(channelsInUse, channel)
+			if isAuthenticated {
+				channelsInUse = append(channelsInUse, channel)
+			} else {
+				break
+			}
 		}
 	}
 }
@@ -95,7 +104,7 @@ func parseAuthMessage(r *bufio.Reader) (bool, int) {
 	// Parse channel and password
 	msg, err := r.ReadString('\n')
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to retrieve authentication message")
+		fmt.Fprintln(os.Stderr, "Unable to retrieve authentication message: ", err.Error())
 		return false, nilInt
 	}
 	channelInput := string(msg[0])
