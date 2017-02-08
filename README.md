@@ -1,5 +1,7 @@
 # swanntools
-Capture tools for the Swann DVR4-1200 DVR (also known as DVR04B and DM70-D, manufactured by RaySharp), inspired by [meatheadmike/swanntools](https://github.com/meatheadmike/swanntools) which was developed for DVR8-2600. Whereas the latter's mobile stream script is compatible with the DVR4-1200, the media script (featuring much higher quality) does not.
+Capture tools for the Swann DVR4-1200 DVR (also known as DVR04B and DM70-D, manufactured by RaySharp), inspired by [meatheadmike/swanntools](https://github.com/meatheadmike/swanntools) which was developed for DVR8-2600. Whereas the latter's mobile stream script is compatible with the DVR4-1200 (for a 320x240 stream), the media port (featuring 704x480 feeds for similar model DVRs [but not the DVR4-1200]) does not.
+
+Although the DVR4-1200 only streams 320x240 over both mobile and media ports, it is worth using the media port in case the code can be adapted to similar model DVRs which do provide higher quality streams.
 
 This repository is part of a long-term project to build a more secure system piggybacking off the DVR4-1200 with cloud backups and much better web/mobile clients.
 
