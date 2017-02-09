@@ -39,9 +39,11 @@ func Handle(c *client) {
 	for {
 		select {
 		case message := <-c.send:
-			// TODO: Send this to the server
-			_ = message
-		//log.Printf("Sent:\n%v", hex.Dump(message))
+			_, err := c.conn.Write(message)
+			if err != nil {
+				c.conn.Close()
+				panic(err)
+			}
 		}
 	}
 }
@@ -86,22 +88,24 @@ func newServerConnection(channel *int) *tls.Conn {
 		fmt.Fprintln(os.Stderr, "Writing stream init to server failed: ", err.Error())
 		os.Exit(1)
 	}
-	conn.Close()
 
 	// Verify the server response
 	// TODO: Add timeout
 	authResponse := make([]byte, 3)
 	_, err = conn.Read(authResponse)
 	if err != nil {
+		conn.Close()
 		panic(err)
 	}
 
 	if string(authResponse) == SuccessfulClientAuthString {
 		fmt.Fprintln(os.Stdout, "Successfully authenticated with the server")
 	} else if string(authResponse) == FailedClientAuthString {
+		conn.Close()
 		fmt.Fprintln(os.Stderr, "Authentication failed due to invalid credentials.")
 		os.Exit(1)
 	} else {
+		conn.Close()
 		fmt.Fprintln(os.Stderr, "Authentication failed due to unknown reason.")
 		os.Exit(1)
 	}

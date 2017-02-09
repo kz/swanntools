@@ -4,7 +4,6 @@ import (
 	"os"
 	"github.com/namsral/flag"
 	"fmt"
-	"encoding/hex"
 	"net"
 )
 

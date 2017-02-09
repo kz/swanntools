@@ -14,6 +14,7 @@ import (
 const (
 	SuccessfulAuthString = "200"
 	FailedAuthString     = "403"
+	socketBufferSize     = 1460
 )
 
 func StartListener() {
@@ -50,8 +51,6 @@ func StartListener() {
 }
 
 func handleConn(conn net.Conn) {
-	r := bufio.NewReader(conn)
-
 	isAuthenticated := false
 	var channel int
 
@@ -65,36 +64,47 @@ func handleConn(conn net.Conn) {
 		}
 	}(&channel)
 
+	// Handle authentication
+	r := bufio.NewReader(conn)
 	for {
-		// TODO: Handle authentication
 		if isAuthenticated {
-			// Forward the data to channel
-		} else {
-			// Attempt authentication
-			isAuthenticated, channel = parseAuthMessage(r)
-
-			// Send appropriate response to the client
-			var responseString string
-			if isAuthenticated {
-				responseString = SuccessfulAuthString
-			} else {
-				responseString = FailedAuthString
-			}
-
-			// Send the response to the client
-			_, err := conn.Write([]byte(responseString))
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Unable to write response to client: ", err.Error())
-				break
-			}
-
 			// Append the channel to slice of channels in use
-			if isAuthenticated {
-				channelsInUse = append(channelsInUse, channel)
-			} else {
-				break
-			}
+			channelsInUse = append(channelsInUse, channel)
+			break
 		}
+
+		// Attempt authentication
+		isAuthenticated, channel = parseAuthMessage(r)
+
+		// Send appropriate response to the client
+		var responseString string
+		if isAuthenticated {
+			responseString = SuccessfulAuthString
+		} else {
+			responseString = FailedAuthString
+		}
+		print(responseString)
+
+		// Send the response to the client
+		_, err := conn.Write([]byte(responseString))
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Unable to write response to client: ", err.Error())
+			panic(err)
+		}
+
+		fmt.Fprintln(os.Stdout, "Successfully authenticated!")
+	}
+
+	// Get the camera stream
+	for {
+		data := make([]byte, socketBufferSize)
+		n, err := conn.Read(data)
+		if err != nil {
+			panic(err)
+		}
+
+		// TODO: Do stuff with the camera stream!
+		print(hex.Dump(data[:n]))
 	}
 }
 
