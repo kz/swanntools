@@ -3,11 +3,11 @@ package main
 import (
 	"os"
 	"github.com/namsral/flag"
-	"fmt"
 	"net"
 	"sync"
 	"strings"
 	"strconv"
+	"log"
 )
 
 const maxChannels = 4
@@ -48,7 +48,7 @@ func main() {
 	if *userInput == "" || *passInput == "" || *keyInput == "" || *sourceInput == "" || *destInput == "" ||
 		*channelInput == "" || *certsInput == "" {
 		fs.PrintDefaults()
-		os.Exit(1)
+		log.Fatalln("You are missing one or more flags. See above for the list of required flags.")
 	}
 	config.user = *userInput
 	config.pass = *passInput
@@ -59,16 +59,13 @@ func main() {
 	for i, channel := range channelSlice {
 		intChannel, err := strconv.Atoi(channel)
 		if i >= maxChannels {
-			fmt.Fprintln(os.Stderr, "You cannot have greater than %d streams", maxChannels)
-			os.Exit(1)
+			log.Fatalf("You cannot have greater than %d streams", maxChannels)
 		} else if err != nil || intChannel > maxChannels {
-			fmt.Fprintln(os.Stderr, "All channels need to be a number between 1 and %d", maxChannels)
-			os.Exit(1)
+			log.Fatalf("All channels need to be a number between 1 and %d", maxChannels)
 		}
 
 		if intInSlice(&intChannel, &config.channels) {
-			fmt.Fprintln(os.Stderr, "All channels need to be unique", maxChannels)
-			os.Exit(1)
+			log.Fatalln("All channels need to be unique")
 		}
 		config.channels = append(config.channels, intChannel)
 	}
@@ -76,8 +73,7 @@ func main() {
 	// Ensure that the certificates exist at the location
 	for _, file := range []string{"client.key", "client.pem", "server.pem"} {
 		if _, err := os.Stat(*certsInput + "/" + file); err != nil {
-			fmt.Fprintln(os.Stderr, "Unable to stat certificates: ", err.Error())
-			os.Exit(1)
+			log.Fatalln( "Unable to stat certificates: ", err.Error())
 		}
 	}
 	config.certs = *certsInput
@@ -85,13 +81,12 @@ func main() {
 	// Resolve the TCP addresses
 	tcpAddr, err := net.ResolveTCPAddr("tcp", *sourceInput)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "ResolveTCPAddr failed: ", err.Error())
-		os.Exit(1)
+		log.Fatalln("Resolving the source address failed: ", err.Error())
 	}
 	config.source = tcpAddr
 	tcpAddr, err = net.ResolveTCPAddr("tcp", *destInput)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "ResolveTCPAddr failed: ", err.Error())
+		log.Fatalln("Resolving the destination address failed: ", err.Error())
 		os.Exit(1)
 	}
 	config.dest = tcpAddr

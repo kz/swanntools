@@ -20,39 +20,43 @@ const (
 
 // newStreamConnection creates and sets up a new TCP connection
 func newStreamConnection(channel *int) *net.TCPConn {
+	// Get the stream initialization bytes
+	streamInitData := initStreamBytes(channel)
+
 	// Set up a new connection
 	conn, err := net.DialTCP("tcp", nil, config.source)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Dial failed:", err.Error())
-		os.Exit(1)
+		log.Fatalln("Dialing the DVR failed:", err.Error())
 	}
 
 	// Send the stream initialization byte array
 	fmt.Fprintln(os.Stdout, "Sending stream initialization byte array.")
-	_, err = conn.Write(initStreamBytes(channel))
+	_, err = conn.Write(streamInitData)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Writing stream init to server failed: ", err.Error())
-		os.Exit(1)
+		conn.Close()
+		log.Fatalln("Writing stream init to DVR failed: ", err.Error())
 	}
 
 	// Check authentication response
 	data := make([]byte, 8)
 	_, err = conn.Read(data)
 	if err != nil {
-		panic(err)
+		conn.Close()
+		log.Fatalln("Unable to read DVR authentication response: ", err.Error())
 	}
 
 	// Check if authenticated
 	successfulAuthBytes, _ := hex.DecodeString(successfulAuthValues)
 	failedAuthBytes, _ := hex.DecodeString(failedAuthValues)
 	if bytes.Equal(data, successfulAuthBytes) {
-		fmt.Fprintln(os.Stdout, "Successfully logged in!")
+		conn.Close()
+		log.Fatalln("DVR authentication successful.")
 	} else if bytes.Equal(data, failedAuthBytes) {
-		fmt.Fprintln(os.Stderr, "Authentication failed due to invalid credentials.")
-		os.Exit(1)
+		conn.Close()
+		log.Fatalln("DVR authentication failed due to invalid credentials.")
 	} else {
-		fmt.Fprintln(os.Stderr, "Authentication failed due to unknown reason.")
-		os.Exit(1)
+		conn.Close()
+		log.Fatalln("DVR authentication failed due to unknown reason.")
 	}
 
 	// Return the stream
@@ -65,26 +69,29 @@ func initStreamBytes(channel *int) []byte {
 
 	channelStartPos := 77
 	channelEndPos := 78
+	
 	// Convert channel from 1, 2, 3, 4 to 1, 2, 4, 8 respectively
 	parsedChannel := int(math.Exp2(float64(*channel - 1)))
 	hexValues = hexValues[:channelStartPos] + fmt.Sprintf("%d", parsedChannel) + hexValues[channelEndPos:]
 
+	// Parse username
 	for i, v := range config.user {
 		startPos := 94 + 2*i
 		endPos := 96 + 2*i
 		hexValues = hexValues[:startPos] + fmt.Sprintf("%x", int(v)) + hexValues[endPos:]
 	}
 
+	// Parse password
 	for i, v := range config.pass {
 		startPos := 158 + 2*i
 		endPos := 160 + 2*i
 		hexValues = hexValues[:startPos] + fmt.Sprintf("%x", int(v)) + hexValues[endPos:]
 	}
 
+	// Decode the hex string into a byte array
 	byteArray, err := hex.DecodeString(hexValues)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to decode stream initialization values to byte array: ", err.Error())
-		os.Exit(1)
+		log.Fatalln("Unable to decode stream initialization values to byte array: ", err.Error())
 	}
 	return byteArray
 }
@@ -107,7 +114,7 @@ func StreamToServer(channel *int) {
 		data := make([]byte, socketBufferSize)
 		n, err := conn.Read(data)
 		if err != nil {
-			panic(err)
+			log.Panicln("Error occurred while reading from DVR stream connection", err.Error())
 		}
 
 		c.send <- data[:n]
@@ -124,7 +131,7 @@ func StreamToStdout(channel *int) {
 		data := make([]byte, socketBufferSize)
 		n, err := conn.Read(data)
 		if err != nil {
-			panic(err)
+			log.Panicln("Error occurred while reading from DVR stream connection", err.Error())
 		}
 
 		fmt.Fprintf(os.Stdout, "%s", data[:n])
@@ -138,13 +145,13 @@ func StreamToFile(channel *int) {
 	fileName := "swann_" + strconv.Itoa(*channel)
 	file, err := os.Create(fileName)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln("Error occured while attempting to open output file", err.Error())
 	}
 
 	// Open file for writing
 	file, err = os.OpenFile(fileName, os.O_WRONLY, 0644)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
 	print("Writing to: " + fileName)
 	defer file.Close()
@@ -156,7 +163,7 @@ func StreamToFile(channel *int) {
 		data := make([]byte, socketBufferSize)
 		n, err := conn.Read(data)
 		if err != nil {
-			panic(err)
+			log.Panicln("Error occurred while reading from DVR stream connection", err.Error())
 		}
 
 		file.Write(data[:n])

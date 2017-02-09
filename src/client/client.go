@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"io/ioutil"
 	"strconv"
+	"log"
 )
 
 const (
@@ -52,15 +53,13 @@ func newServerConnection(channel *int) *tls.Conn {
 	// Load client key pair
 	cert, err := tls.LoadX509KeyPair(config.certs+"/client.pem", config.certs+"/client.key")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to load client key pair")
-		os.Exit(1)
+		log.Fatalln("Unable to load client key pair")
 	}
 
 	// Read the server certificate
 	serverCert, err := ioutil.ReadFile(config.certs + "/server.pem")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to read server certificate file")
-		os.Exit(1)
+		log.Fatalln("Unable to read server certificate file")
 	}
 	roots := x509.NewCertPool()
 	roots.AppendCertsFromPEM(serverCert)
@@ -76,8 +75,7 @@ func newServerConnection(channel *int) *tls.Conn {
 	// Create a new connection
 	conn, err := tls.Dial("tcp", config.dest.String(), tlsConfig)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Dial failed:", err.Error())
-		os.Exit(1)
+		log.Fatalln("Unable to dial the server: ", err.Error())
 	}
 
 	// Send the channel number along with login details
@@ -85,8 +83,7 @@ func newServerConnection(channel *int) *tls.Conn {
 	_, err = conn.Write([]byte(strconv.Itoa(*channel) + config.key + "\n"))
 	if err != nil {
 		conn.Close()
-		fmt.Fprintln(os.Stderr, "Writing stream init to server failed: ", err.Error())
-		os.Exit(1)
+		log.Fatalln("Writing stream init to server failed: ", err.Error())
 	}
 
 	// Verify the server response
@@ -95,18 +92,18 @@ func newServerConnection(channel *int) *tls.Conn {
 	_, err = conn.Read(authResponse)
 	if err != nil {
 		conn.Close()
-		panic(err)
+		log.Fatalln("Unable to read the server authentication response: ", err.Error())
 	}
 
 	if string(authResponse) == SuccessfulClientAuthString {
-		fmt.Fprintln(os.Stdout, "Successfully authenticated with the server")
+		log.Println("Successfully authenticated with the server")
 	} else if string(authResponse) == FailedClientAuthString {
 		conn.Close()
-		fmt.Fprintln(os.Stderr, "Authentication failed due to invalid credentials.")
+		log.Fatalln("Authentication failed due to invalid credentials.")
 		os.Exit(1)
 	} else {
 		conn.Close()
-		fmt.Fprintln(os.Stderr, "Authentication failed due to unknown reason.")
+		log.Fatalln("Authentication failed due to unknown reason.")
 		os.Exit(1)
 	}
 
