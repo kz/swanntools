@@ -30,7 +30,7 @@ func newStreamConnection(channel *int) *net.TCPConn {
 	}
 
 	// Send the stream initialization byte array
-	fmt.Fprintln(os.Stdout, "Sending stream initialization byte array.")
+	log.Println( "Sending DVR stream initialization byte array.")
 	_, err = conn.Write(streamInitData)
 	if err != nil {
 		conn.Close()
@@ -114,7 +114,7 @@ func StreamToServer(channel *int) {
 		data := make([]byte, socketBufferSize)
 		n, err := conn.Read(data)
 		if err != nil {
-			log.Panicln("Error occurred while reading from DVR stream connection", err.Error())
+			log.Panicln("Error occurred while reading from DVR stream connection: ", err.Error())
 		}
 
 		c.send <- data[:n]
@@ -131,10 +131,10 @@ func StreamToStdout(channel *int) {
 		data := make([]byte, socketBufferSize)
 		n, err := conn.Read(data)
 		if err != nil {
-			log.Panicln("Error occurred while reading from DVR stream connection", err.Error())
+			log.Panicln("Error occurred while reading from DVR stream connection: ", err.Error())
 		}
 
-		fmt.Fprintf(os.Stdout, "%s", data[:n])
+		log.Printf( "%s", data[:n])
 	}
 }
 
@@ -145,7 +145,7 @@ func StreamToFile(channel *int) {
 	fileName := "swann_" + strconv.Itoa(*channel)
 	file, err := os.Create(fileName)
 	if err != nil {
-		log.Fatalln("Error occured while attempting to open output file", err.Error())
+		log.Fatalln("Error occured while attempting to open output file: ", err.Error())
 	}
 
 	// Open file for writing
@@ -163,7 +163,7 @@ func StreamToFile(channel *int) {
 		data := make([]byte, socketBufferSize)
 		n, err := conn.Read(data)
 		if err != nil {
-			log.Panicln("Error occurred while reading from DVR stream connection", err.Error())
+			log.Panicln("Error occurred while reading from DVR stream connection: ", err.Error())
 		}
 
 		file.Write(data[:n])

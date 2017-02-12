@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"crypto/x509"
 	"crypto/tls"
@@ -79,7 +78,7 @@ func newServerConnection(channel *int) *tls.Conn {
 	}
 
 	// Send the channel number along with login details
-	fmt.Fprintln(os.Stdout, "Sending stream initialization byte array.")
+	log.Println("Sending server stream initialization byte array.")
 	_, err = conn.Write([]byte(strconv.Itoa(*channel) + config.key + "\n"))
 	if err != nil {
 		conn.Close()

@@ -2,13 +2,12 @@ package main
 
 import (
 	"crypto/tls"
-	"fmt"
-	"os"
 	"net"
 	"bufio"
 	"strconv"
 	"encoding/hex"
 	"bytes"
+	"log"
 )
 
 const (
@@ -21,8 +20,7 @@ func StartListener() {
 	// Load server key pair
 	cert, err := tls.LoadX509KeyPair(config.certs+"/server.pem", config.certs+"/server.key")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to load server key pair: ", err.Error())
-		os.Exit(1)
+		log.Fatalln("Unable to load server key pair: ", err.Error())
 	}
 
 	// Add certificate to TLS config
@@ -30,21 +28,20 @@ func StartListener() {
 
 	listener, err := tls.Listen("tcp", config.bindAddr.String(), tlsConfig)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to start TLS listener: ", err.Error())
-		os.Exit(1)
+		log.Fatalln("Unable to start TLS listener: ", err.Error())
 	}
 
 	// Print debugging messages
-	fmt.Fprintln(os.Stdout, "Server listening on: %s", config.bindAddr)
-	println("Server listening for password:")
-	println(hex.Dump([]byte(config.key)))
-	println("Server ready")
+	log.Printf("Server listening on: %s\n", config.bindAddr)
+	log.Println("Server listening for password:")
+	log.Println(hex.Dump([]byte(config.key)))
+	log.Println("Server ready")
 
 	for {
 		// TODO: Use Mutexes to protect channels from simultaneous writes
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "An error occured when accepting a connection: ", err.Error())
+			log.Fatalln("An error occured when accepting a connection: ", err.Error())
 		}
 		go handleConn(conn)
 	}
@@ -83,16 +80,14 @@ func handleConn(conn net.Conn) {
 		} else {
 			responseString = FailedAuthString
 		}
-		print(responseString)
 
 		// Send the response to the client
 		_, err := conn.Write([]byte(responseString))
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Unable to write response to client: ", err.Error())
-			panic(err)
+			log.Panicln("Unable to write response to client: ", err.Error())
 		}
 
-		fmt.Fprintln(os.Stdout, "Successfully authenticated!")
+		log.Println("Successfully authenticated!")
 	}
 
 	// Get the camera stream
@@ -114,7 +109,7 @@ func parseAuthMessage(r *bufio.Reader) (bool, int) {
 	// Parse channel and password
 	msg, err := r.ReadString('\n')
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to retrieve authentication message: ", err.Error())
+		log.Println("Unable to retrieve authentication message: ", err.Error())
 		return false, nilInt
 	}
 	channelInput := string(msg[0])
@@ -123,28 +118,28 @@ func parseAuthMessage(r *bufio.Reader) (bool, int) {
 
 	// Validate length, accounting for the line break
 	if len(msg) < 3 {
-		fmt.Fprintln(os.Stderr, "Authentication failed due to invalid authentication message length")
+		log.Println("Authentication failed due to invalid authentication message length")
 		return false, nilInt
 	}
 
 	// Validate channel
 	intChannel, err := strconv.Atoi(channelInput)
 	if len(channelsInUse) >= maxChannels {
-		fmt.Fprintln(os.Stderr, "You cannot have greater than %d streams", maxChannels)
+		log.Printf("You cannot have greater than %d streams\n", maxChannels)
 		return false, nilInt
 	} else if err != nil || intChannel > maxChannels {
-		fmt.Fprintln(os.Stderr, "All channels need to be a number between 1 and %d", maxChannels)
+		log.Printf("All channels need to be a number between 1 and %d\n", maxChannels)
 		return false, nilInt
 	} else if intInSlice(&intChannel, &channelsInUse) {
-		fmt.Fprintln(os.Stderr, "The channel %d is currently receiving a stream", intChannel)
+		log.Printf("The channel %d is currently receiving a stream\n", intChannel)
 		return false, nilInt
 	}
 
 	// Validate password
-	println("Received password:")
-	println(hex.Dump([]byte(passwordInput)))
+	log.Println("Received password:")
+	log.Println(hex.Dump([]byte(passwordInput)))
 	if passwordInput != config.key {
-		fmt.Fprintln(os.Stderr, "Incorrect password")
+		log.Println("Incorrect password")
 		return false, nilInt
 	}
 
