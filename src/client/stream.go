@@ -30,7 +30,7 @@ func newStreamConnection(channel *int) *net.TCPConn {
 	}
 
 	// Send the stream initialization byte array
-	log.Println( "Sending DVR stream initialization byte array.")
+	log.Println("Sending DVR stream initialization byte array.")
 	_, err = conn.Write(streamInitData)
 	if err != nil {
 		conn.Close()
@@ -49,7 +49,6 @@ func newStreamConnection(channel *int) *net.TCPConn {
 	successfulAuthBytes, _ := hex.DecodeString(successfulAuthValues)
 	failedAuthBytes, _ := hex.DecodeString(failedAuthValues)
 	if bytes.Equal(data, successfulAuthBytes) {
-		conn.Close()
 		log.Println("DVR authentication successful.")
 	} else if bytes.Equal(data, failedAuthBytes) {
 		conn.Close()
@@ -69,7 +68,7 @@ func initStreamBytes(channel *int) []byte {
 
 	channelStartPos := 77
 	channelEndPos := 78
-	
+
 	// Convert channel from 1, 2, 3, 4 to 1, 2, 4, 8 respectively
 	parsedChannel := int(math.Exp2(float64(*channel - 1)))
 	hexValues = hexValues[:channelStartPos] + fmt.Sprintf("%d", parsedChannel) + hexValues[channelEndPos:]
@@ -134,7 +133,7 @@ func StreamToStdout(channel *int) {
 			log.Panicln("Error occurred while reading from DVR stream connection: ", err.Error())
 		}
 
-		log.Printf( "%s", data[:n])
+		log.Printf("%s", data[:n])
 	}
 }
 
