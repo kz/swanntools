@@ -50,7 +50,7 @@ func newStreamConnection(channel *int) *net.TCPConn {
 	failedAuthBytes, _ := hex.DecodeString(failedAuthValues)
 	if bytes.Equal(data, successfulAuthBytes) {
 		conn.Close()
-		log.Fatalln("DVR authentication successful.")
+		log.Println("DVR authentication successful.")
 	} else if bytes.Equal(data, failedAuthBytes) {
 		conn.Close()
 		log.Fatalln("DVR authentication failed due to invalid credentials.")
