@@ -1,12 +1,14 @@
 package main
 
 import (
-	"os"
 	"crypto/x509"
 	"crypto/tls"
 	"io/ioutil"
 	"strconv"
 	"log"
+	"github.com/jpillora/backoff"
+	"time"
+	"os"
 )
 
 const (
@@ -41,8 +43,11 @@ func Handle(c *client) {
 		case message := <-c.send:
 			_, err := c.conn.Write(message)
 			if err != nil {
+				log.Println("Error occurred while reading from DVR stream connection: ", err.Error())
+				log.Println("Attempting to reestablish connection...")
 				c.conn.Close()
-				panic(err)
+				c.conn = newServerConnection(c.channel)
+				continue
 			}
 		}
 	}
@@ -71,22 +76,43 @@ func newServerConnection(channel *int) *tls.Conn {
 		RootCAs:            roots,
 	}
 
-	// Create a new connection
-	conn, err := tls.Dial("tcp", config.dest.String(), tlsConfig)
-	if err != nil {
-		log.Fatalln("Unable to dial the server: ", err.Error())
-	}
+	log.Println("Establishing connection and authenticating with server...")
 
-	// Send the channel number along with login details
-	log.Println("Sending server stream initialization byte array.")
-	_, err = conn.Write([]byte(strconv.Itoa(*channel) + config.key + "\n"))
-	if err != nil {
-		conn.Close()
-		log.Fatalln("Writing stream init to server failed: ", err.Error())
+	// Add a backoff/retry algorithm
+	b := &backoff.Backoff{
+		Min:    100 * time.Millisecond,
+		Max:    5 * time.Minute,
+		Factor: 2,
+		Jitter: false,
+	}
+	var conn *tls.Conn
+	for {
+		// Create a new connection
+		conn, err = tls.Dial("tcp", config.dest.String(), tlsConfig)
+		if err != nil {
+			d := b.Duration()
+			log.Println("Unable to dial the server: ", err.Error())
+			log.Printf("Retrying in %s...\n", d)
+			time.Sleep(d)
+			continue
+		}
+
+		// Send the channel number along with login details
+		_, err = conn.Write([]byte(strconv.Itoa(*channel) + config.key + "\n"))
+		if err != nil {
+			conn.Close()
+			d := b.Duration()
+			log.Println("Writing stream init to server failed: ", err.Error())
+			log.Printf("Retrying in %s...\n", d)
+			time.Sleep(d)
+			continue
+		}
+
+		b.Reset()
+		break
 	}
 
 	// Verify the server response
-	// TODO: Add timeout
 	authResponse := make([]byte, 3)
 	_, err = conn.Read(authResponse)
 	if err != nil {
@@ -95,7 +121,7 @@ func newServerConnection(channel *int) *tls.Conn {
 	}
 
 	if string(authResponse) == SuccessfulClientAuthString {
-		log.Println("Successfully authenticated with the server")
+		log.Println("Successfully authenticated with the server.")
 	} else if string(authResponse) == FailedClientAuthString {
 		conn.Close()
 		log.Fatalln("Authentication failed due to invalid credentials.")

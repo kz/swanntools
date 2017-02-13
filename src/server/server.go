@@ -32,16 +32,15 @@ func StartListener() {
 	}
 
 	// Print debugging messages
-	log.Printf("Server listening on: %s\n", config.bindAddr)
-	log.Println("Server listening for password:")
-	log.Println(hex.Dump([]byte(config.key)))
-	log.Println("Server ready")
+	log.Printf("Server ready and listening on: %s\n", config.bindAddr)
 
 	for {
 		// TODO: Use Mutexes to protect channels from simultaneous writes
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Fatalln("An error occured when accepting a connection: ", err.Error())
+			log.Println("An error occured when accepting a connection: ", err.Error())
+			conn.Close()
+			continue
 		}
 		go handleConn(conn)
 	}
@@ -76,8 +75,10 @@ func handleConn(conn net.Conn) {
 		// Send appropriate response to the client
 		var responseString string
 		if isAuthenticated {
+			log.Printf("Auth success - %s - #%d\n", conn.RemoteAddr().String(), channel)
 			responseString = SuccessfulAuthString
 		} else {
+			log.Printf("Auth failure - %s - #%d\n", conn.RemoteAddr().String(), channel)
 			responseString = FailedAuthString
 		}
 
@@ -86,8 +87,6 @@ func handleConn(conn net.Conn) {
 		if err != nil {
 			log.Panicln("Unable to write response to client: ", err.Error())
 		}
-
-		log.Println("Successfully authenticated!")
 	}
 
 	// Get the camera stream
@@ -95,7 +94,8 @@ func handleConn(conn net.Conn) {
 		data := make([]byte, socketBufferSize)
 		n, err := conn.Read(data)
 		if err != nil {
-			panic(err)
+			log.Printf("An error occurred - %s - %d - %s", conn.RemoteAddr().String(), channel, err.Error())
+			break
 		}
 
 		// TODO: Do stuff with the camera stream!
@@ -136,10 +136,7 @@ func parseAuthMessage(r *bufio.Reader) (bool, int) {
 	}
 
 	// Validate password
-	log.Println("Received password:")
-	log.Println(hex.Dump([]byte(passwordInput)))
 	if passwordInput != config.key {
-		log.Println("Incorrect password")
 		return false, nilInt
 	}
 
