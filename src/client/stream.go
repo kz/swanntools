@@ -22,7 +22,7 @@ const (
 )
 
 // newStreamConnection creates and sets up a new TCP connection
-func newStreamConnection(channel *int) *net.TCPConn {
+func newStreamConnection(channel *int) net.Conn {
 	// Get the stream initialization bytes
 	streamInitData := initStreamBytes(channel)
 
@@ -35,11 +35,11 @@ func newStreamConnection(channel *int) *net.TCPConn {
 		Factor: 2,
 		Jitter: false,
 	}
-	var conn *net.TCPConn
+	var conn net.Conn
 	for {
 		// Set up a new connection
 		var err error
-		conn, err = net.DialTCP("tcp", nil, config.source)
+		conn, err = net.DialTimeout("tcp", config.source.String(), timeoutSec*time.Second)
 		if err != nil {
 			log.Println("Dialing the DVR failed:", err.Error())
 			d := b.Duration()
