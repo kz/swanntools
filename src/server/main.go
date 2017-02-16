@@ -4,7 +4,7 @@ import (
 	"os"
 	"github.com/urfave/cli"
 	"net"
-	"log"
+	log "github.com/Sirupsen/logrus"
 )
 
 const maxChannels = 4

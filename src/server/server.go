@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"encoding/hex"
 	"bytes"
-	"log"
+	log "github.com/Sirupsen/logrus"
 )
 
 const (
@@ -34,13 +34,13 @@ func StartListener() {
 	}
 
 	// Print debugging messages
-	log.Printf("Server ready and listening on: %s\n", config.bindAddr)
+	log.Infof("Server ready and listening on: %s\n", config.bindAddr)
 
 	for {
 		// TODO: Use Mutexes to protect channels from simultaneous writes
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Println("An error occured when accepting a connection: ", err.Error())
+			log.Warnln("An error occured when accepting a connection: ", err.Error())
 			conn.Close()
 			continue
 		}
@@ -77,15 +77,19 @@ func handleConn(conn net.Conn) {
 
 		// Send appropriate response to the client
 		if isAuthenticated {
-			log.Printf("Auth success - %s - #%d\n", conn.RemoteAddr().String(), channel)
+			log.WithFields(log.Fields{
+				"source": conn.RemoteAddr().String(), "channel": channel,
+			}).Println("Auth success")
 		} else {
-			log.Printf("Auth failure - %s - #%d - %d\n", conn.RemoteAddr().String(), channel, response)
+			log.WithFields(log.Fields{
+				"source": conn.RemoteAddr().String(), "channel": channel, "code": response,
+			}).Warnln("Auth failure")
 		}
 
 		// Send the response to the client
 		_, err := conn.Write([]byte(response))
 		if err != nil {
-			log.Println("Unable to write response to client: ", err.Error())
+			log.Infoln("Unable to write response to client: ", err.Error())
 			break
 		}
 	}
@@ -95,7 +99,9 @@ func handleConn(conn net.Conn) {
 		data := make([]byte, socketBufferSize)
 		n, err := conn.Read(data)
 		if err != nil {
-			log.Printf("An error occurred - %s - %d - %s", conn.RemoteAddr().String(), channel, err.Error())
+			log.WithFields(log.Fields{
+				"source": conn.RemoteAddr().String(), "channel": channel,
+			}).Warnf("An error occurred while reading stream: %s\n", err.Error())
 			break
 		}
 
@@ -110,7 +116,7 @@ func parseAuthMessage(r *bufio.Reader) (isAuthenticated bool, channelNum int, re
 	// Parse channel and password
 	msg, err := r.ReadString('\n')
 	if err != nil {
-		log.Println("Unable to retrieve authentication message: ", err.Error())
+		log.Warnln("Unable to retrieve authentication message: ", err.Error())
 		return false, nilInt, FailedAuthString
 	}
 	channelInput := string(msg[0])
@@ -119,20 +125,20 @@ func parseAuthMessage(r *bufio.Reader) (isAuthenticated bool, channelNum int, re
 
 	// Validate length, accounting for the line break
 	if len(msg) < 3 {
-		log.Println("Authentication failed due to invalid authentication message length")
+		log.Warnln("Authentication failed due to invalid authentication message length")
 		return false, nilInt, FailedAuthString
 	}
 
 	// Validate channel
 	intChannel, err := strconv.Atoi(channelInput)
 	if len(channelsInUse) >= maxChannels {
-		log.Printf("You cannot have greater than %d streams\n", maxChannels)
+		log.Warnln("You cannot have greater than %d streams\n", maxChannels)
 		return false, nilInt, InvalidChannelString
 	} else if err != nil || intChannel > maxChannels {
-		log.Printf("All channels need to be a number between 1 and %d\n", maxChannels)
+		log.Warnln("All channels need to be a number between 1 and %d\n", maxChannels)
 		return false, nilInt, InvalidChannelString
 	} else if intInSlice(&intChannel, &channelsInUse) {
-		log.Printf("The channel %d is currently receiving a stream\n", intChannel)
+		log.Warnln("The channel %d is currently receiving a stream\n", intChannel)
 		return false, nilInt, ChannelInUseString
 	}
 

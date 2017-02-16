@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"encoding/hex"
 	"bytes"
-	"log"
+	log "github.com/Sirupsen/logrus"
 	"math"
 	"github.com/jpillora/backoff"
 	"time"
@@ -24,7 +24,7 @@ func newStreamConnection(channel *int) net.Conn {
 	// Get the stream initialization bytes
 	streamInitData := initStreamBytes(channel)
 
-	log.Println("Establishing connection and authenticating with the DVR...")
+	log.Infoln("Establishing connection and authenticating with the DVR...")
 
 	// Add a backoff/retry algorithm
 	b := &backoff.Backoff{
@@ -39,7 +39,7 @@ func newStreamConnection(channel *int) net.Conn {
 		var err error
 		conn, err = net.DialTimeout("tcp", config.source.String(), timeoutSec*time.Second)
 		if err != nil {
-			log.Println("Dialing the DVR failed:", err.Error())
+			log.Warnln("Dialing the DVR failed:", err.Error())
 			d := b.Duration()
 			log.Printf("Retrying in %s...\n", d)
 			time.Sleep(d)
@@ -51,9 +51,9 @@ func newStreamConnection(channel *int) net.Conn {
 		_, err = conn.Write(streamInitData)
 		if err != nil {
 			conn.Close()
-			log.Println("Writing stream init to DVR failed: ", err.Error())
+			log.Warnln("Writing stream init to DVR failed: ", err.Error())
 			d := b.Duration()
-			log.Printf("Retrying in %s...\n", d)
+			log.Infof("Retrying in %s...\n", d)
 			time.Sleep(d)
 			continue
 		}
@@ -73,7 +73,7 @@ func newStreamConnection(channel *int) net.Conn {
 	successfulAuthBytes, _ := hex.DecodeString(successfulAuthValues)
 	failedAuthBytes, _ := hex.DecodeString(failedAuthValues)
 	if bytes.Equal(data, successfulAuthBytes) {
-		log.Println("DVR authentication successful.")
+		log.Infoln("DVR authentication successful.")
 	} else if bytes.Equal(data, failedAuthBytes) {
 		conn.Close()
 		log.Fatalln("DVR authentication failed due to invalid credentials.")
@@ -135,7 +135,7 @@ func StreamToServer(channel *int) {
 		data := make([]byte, socketBufferSize)
 		n, err := conn.Read(data)
 		if err != nil {
-			log.Println("Error occurred while reading from DVR stream connection: ", err.Error())
+			log.Warnln("Error occurred while reading from DVR stream connection: ", err.Error())
 			conn.Close()
 			conn = newStreamConnection(channel)
 			continue

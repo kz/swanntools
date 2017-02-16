@@ -5,9 +5,9 @@ import (
 	"crypto/tls"
 	"io/ioutil"
 	"strconv"
-	"log"
 	"github.com/jpillora/backoff"
 	"time"
+	log "github.com/Sirupsen/logrus"
 )
 
 const (
@@ -44,8 +44,8 @@ func Handle(c *client) {
 		case message := <-c.send:
 			_, err := c.conn.Write(message)
 			if err != nil {
-				log.Println("Error occurred while reading from DVR stream connection: ", err.Error())
-				log.Println("Attempting to reestablish connection...")
+				log.Warnln("Error occurred while reading from DVR stream connection: ", err.Error())
+				log.Infoln("Attempting to reestablish connection...")
 				c.conn.Close()
 				c.conn = newServerConnection(c.channel)
 				continue
@@ -77,7 +77,7 @@ func newServerConnection(channel *int) *tls.Conn {
 		RootCAs:            roots,
 	}
 
-	log.Println("Establishing connection and authenticating with server...")
+	log.Infoln("Establishing connection and authenticating with server...")
 
 	// Add a backoff/retry algorithm
 	b := &backoff.Backoff{
@@ -92,8 +92,8 @@ func newServerConnection(channel *int) *tls.Conn {
 		conn, err = tls.Dial("tcp", config.dest.String(), tlsConfig)
 		if err != nil {
 			d := b.Duration()
-			log.Println("Unable to dial the server: ", err.Error())
-			log.Printf("Retrying in %s...\n", d)
+			log.Warnln("Unable to dial the server: ", err.Error())
+			log.Infof("Retrying in %s...\n", d)
 			time.Sleep(d)
 			continue
 		}
@@ -103,8 +103,8 @@ func newServerConnection(channel *int) *tls.Conn {
 		if err != nil {
 			conn.Close()
 			d := b.Duration()
-			log.Println("Writing stream init to server failed: ", err.Error())
-			log.Printf("Retrying in %s...\n", d)
+			log.Warnln("Writing stream init to server failed: ", err.Error())
+			log.Infof("Retrying in %s...\n", d)
 			time.Sleep(d)
 			continue
 		}
@@ -122,7 +122,7 @@ func newServerConnection(channel *int) *tls.Conn {
 	}
 
 	if string(authResponse) == SuccessfulClientAuthString {
-		log.Println("Successfully authenticated with the server.")
+		log.Infoln("Successfully authenticated with the server.")
 	} else if string(authResponse) == FailedClientAuthString {
 		conn.Close()
 		log.Fatalln("Authentication failed due to invalid credentials.")

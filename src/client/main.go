@@ -7,7 +7,7 @@ import (
 	"sync"
 	"strings"
 	"strconv"
-	"log"
+	log "github.com/Sirupsen/logrus"
 )
 
 const maxChannels = 4
@@ -115,7 +115,6 @@ func run() {
 	tcpAddr, err = net.ResolveTCPAddr("tcp", flags.dest)
 	if err != nil {
 		log.Fatalln("Resolving the destination address failed: ", err.Error())
-		os.Exit(1)
 	}
 	config.dest = tcpAddr
 
