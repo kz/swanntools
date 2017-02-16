@@ -34,7 +34,7 @@ func StartListener() {
 	}
 
 	// Print debugging messages
-	log.Infof("Server ready and listening on: %s\n", config.bindAddr)
+	log.Infof("Server ready and listening on: %s", config.bindAddr)
 
 	for {
 		// TODO: Use Mutexes to protect channels from simultaneous writes
@@ -101,7 +101,7 @@ func handleConn(conn net.Conn) {
 		if err != nil {
 			log.WithFields(log.Fields{
 				"source": conn.RemoteAddr().String(), "channel": channel,
-			}).Warnf("An error occurred while reading stream: %s\n", err.Error())
+			}).Warnf("An error occurred while reading stream: %s", err.Error())
 			break
 		}
 
@@ -132,13 +132,13 @@ func parseAuthMessage(r *bufio.Reader) (isAuthenticated bool, channelNum int, re
 	// Validate channel
 	intChannel, err := strconv.Atoi(channelInput)
 	if len(channelsInUse) >= maxChannels {
-		log.Warnln("You cannot have greater than %d streams\n", maxChannels)
+		log.Warnln("You cannot have greater than %d streams", maxChannels)
 		return false, nilInt, InvalidChannelString
 	} else if err != nil || intChannel > maxChannels {
-		log.Warnln("All channels need to be a number between 1 and %d\n", maxChannels)
+		log.Warnln("All channels need to be a number between 1 and %d", maxChannels)
 		return false, nilInt, InvalidChannelString
 	} else if intInSlice(&intChannel, &channelsInUse) {
-		log.Warnln("The channel %d is currently receiving a stream\n", intChannel)
+		log.Warnln("The channel %d is currently receiving a stream", intChannel)
 		return false, nilInt, ChannelInUseString
 	}
 

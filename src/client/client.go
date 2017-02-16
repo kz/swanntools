@@ -96,7 +96,7 @@ func newServerConnection(channel *int) *tls.Conn {
 		if err != nil {
 			d := b.Duration()
 			log.Warnln("Unable to dial the server: ", err.Error())
-			log.Infof("Retrying in %s...\n", d)
+			log.Infof("Retrying in %s...", d)
 			time.Sleep(d)
 			continue
 		}
@@ -108,7 +108,7 @@ func newServerConnection(channel *int) *tls.Conn {
 			conn.Close()
 			d := b.Duration()
 			log.Warnln("Writing stream init to server failed: ", err.Error())
-			log.Infof("Retrying in %s...\n", d)
+			log.Infof("Retrying in %s...", d)
 			time.Sleep(d)
 			continue
 		}

@@ -41,7 +41,7 @@ func newStreamConnection(channel *int) net.Conn {
 		if err != nil {
 			log.Warnln("Dialing the DVR failed:", err.Error())
 			d := b.Duration()
-			log.Printf("Retrying in %s...\n", d)
+			log.Printf("Retrying in %s...", d)
 			time.Sleep(d)
 			continue
 		}
@@ -53,7 +53,7 @@ func newStreamConnection(channel *int) net.Conn {
 			conn.Close()
 			log.Warnln("Writing stream init to DVR failed: ", err.Error())
 			d := b.Duration()
-			log.Infof("Retrying in %s...\n", d)
+			log.Infof("Retrying in %s...", d)
 			time.Sleep(d)
 			continue
 		}
