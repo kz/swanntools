@@ -8,13 +8,14 @@ import (
 	"log"
 	"github.com/jpillora/backoff"
 	"time"
-	"os"
 )
 
 const (
 	socketBufferSize           = 1460
 	SuccessfulClientAuthString = "200"
 	FailedClientAuthString     = "403"
+	InvalidChannelString       = "400"
+	ChannelInUseString         = "409"
 )
 
 // client represents the local machine sending the DVR stream
@@ -125,11 +126,15 @@ func newServerConnection(channel *int) *tls.Conn {
 	} else if string(authResponse) == FailedClientAuthString {
 		conn.Close()
 		log.Fatalln("Authentication failed due to invalid credentials.")
-		os.Exit(1)
+	} else if string(authResponse) == InvalidChannelString {
+		conn.Close()
+		log.Fatalln("Authentication failed due to invalid channel provided.")
+	} else if string(authResponse) == ChannelInUseString {
+		conn.Close()
+		log.Fatalln("Unable to connect as channel is in use.")
 	} else {
 		conn.Close()
 		log.Fatalln("Authentication failed due to unknown reason.")
-		os.Exit(1)
 	}
 
 	return conn
