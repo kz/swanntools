@@ -73,7 +73,7 @@ func newStreamConnection(channel *int) net.Conn {
 	successfulAuthBytes, _ := hex.DecodeString(successfulAuthValues)
 	failedAuthBytes, _ := hex.DecodeString(failedAuthValues)
 	if bytes.Equal(data, successfulAuthBytes) {
-		log.Infoln("DVR authentication successful.")
+		log.Infoln("DVR authentication successful. Passing stream to client.")
 	} else if bytes.Equal(data, failedAuthBytes) {
 		conn.Close()
 		log.Fatalln("DVR authentication failed due to invalid credentials.")
@@ -133,6 +133,7 @@ func StreamToServer(channel *int) {
 	// Get the main camera stream
 	for {
 		data := make([]byte, socketBufferSize)
+		conn.SetDeadline(time.Now().Add(timeoutSec * time.Second))
 		n, err := conn.Read(data)
 		if err != nil {
 			log.Warnln("Error occurred while reading from DVR stream connection: ", err.Error())

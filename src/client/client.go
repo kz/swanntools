@@ -8,6 +8,7 @@ import (
 	"github.com/jpillora/backoff"
 	"time"
 	log "github.com/Sirupsen/logrus"
+	"net"
 )
 
 const (
@@ -42,9 +43,10 @@ func Handle(c *client) {
 	for {
 		select {
 		case message := <-c.send:
+			c.conn.SetDeadline(time.Now().Add(timeoutSec * time.Second))
 			_, err := c.conn.Write(message)
 			if err != nil {
-				log.Warnln("Error occurred while reading from DVR stream connection: ", err.Error())
+				log.Warnln("Error occurred while writing to server: ", err.Error())
 				log.Infoln("Attempting to reestablish connection...")
 				c.conn.Close()
 				c.conn = newServerConnection(c.channel)
@@ -89,7 +91,8 @@ func newServerConnection(channel *int) *tls.Conn {
 	var conn *tls.Conn
 	for {
 		// Create a new connection
-		conn, err = tls.Dial("tcp", config.dest.String(), tlsConfig)
+		dialer := &net.Dialer{Timeout: timeoutSec * time.Second}
+		conn, err = tls.DialWithDialer(dialer, "tcp", config.dest.String(), tlsConfig)
 		if err != nil {
 			d := b.Duration()
 			log.Warnln("Unable to dial the server: ", err.Error())
@@ -99,6 +102,7 @@ func newServerConnection(channel *int) *tls.Conn {
 		}
 
 		// Send the channel number along with login details
+		conn.SetDeadline(time.Now().Add(timeoutSec * time.Second))
 		_, err = conn.Write([]byte(strconv.Itoa(*channel) + config.key + "\n"))
 		if err != nil {
 			conn.Close()
@@ -122,7 +126,7 @@ func newServerConnection(channel *int) *tls.Conn {
 	}
 
 	if string(authResponse) == SuccessfulClientAuthString {
-		log.Infoln("Successfully authenticated with the server.")
+		log.Infoln("Successfully authenticated with the server. Passing stream to server.")
 	} else if string(authResponse) == FailedClientAuthString {
 		conn.Close()
 		log.Fatalln("Authentication failed due to invalid credentials.")
