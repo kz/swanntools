@@ -32,12 +32,6 @@ The below directory listing explains the structure of this repository.
 ## Installation
 The program requires a folder created  with certificate files with file names `client.pem`, `client.key`, `server.pem` and `server.key`. Navigate to a new folder of your choice and generate the required certificates for TLS by running: `openssl req -new -nodes -x509 -out client.pem -keyout client.key && openssl req -new -nodes -x509 -out server.pem -keyout server.key`
 
-## Known Bugs
-
-- Pressing Ctrl + C does not terminate main.exe
-- Placement of `OS.Exit(1)`s need to be reviewed so that only goroutines stop instead of the entire program on the client
-- Timeouts should be used
-
 ## Roadmap
 
 - [X] Create a Go script which can authenticate with the DVR via its media protocol
