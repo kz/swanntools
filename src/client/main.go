@@ -100,7 +100,7 @@ func run() {
 	config.pass = flags.pass
 	config.key = flags.key
 
-	// Parse  channel flag string (e.g., "1,3,4" -> ["1", "3", "4"])
+	// Parse channel flag string (e.g., "1,3,4" -> ["1", "3", "4"])
 	channelSlice := strings.Split(flags.channels, ",")
 
 	// Ensure channels exist
