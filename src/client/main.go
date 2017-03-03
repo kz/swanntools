@@ -11,14 +11,11 @@ import (
 	"time"
 )
 
-// maxChannels is the maximum number of channels supported
-const maxChannels = 4
-
-// timeout is the time before network operations timeout
-const timeout = 5 * time.Second
-
-// socketBufferSize is the maximum buffer size for DVR data
-const socketBufferSize = 1460
+const (
+	maxChannels      = 4               // maxChannels is the maximum number of channels supported
+	timeout          = 5 * time.Second // timeout is the time before network operations timeout
+	socketBufferSize = 1460            // socketBufferSize is the maximum buffer size for DVR data
+)
 
 // Config is a struct of all the configuration variables after user input is processed
 type Config struct {
