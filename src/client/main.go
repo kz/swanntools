@@ -8,21 +8,30 @@ import (
 	"strings"
 	"strconv"
 	log "github.com/Sirupsen/logrus"
+	"time"
 )
 
+// maxChannels is the maximum number of channels supported
 const maxChannels = 4
 
-// Config is a type of all the configuration variables after user input is processed
+// timeout is the time before network operations timeout
+const timeout = 5 * time.Second
+
+// socketBufferSize is the maximum buffer size for DVR data
+const socketBufferSize = 1460
+
+// Config is a struct of all the configuration variables after user input is processed
 type Config struct {
-	source   *net.TCPAddr
-	dest     *net.TCPAddr
-	user     string
-	pass     string
-	key      string
-	channels []int
-	certs    string
+	source   *net.TCPAddr // source is the TCPAddr of the DVR
+	dest     *net.TCPAddr // dest is the TCPAddr of the server
+	user     string       // user is the username to authenticate with the DVR
+	pass     string       // pass is the password to authenticate with the DVR
+	key      string       // key is the passphrase to authenticate with the server
+	channels []int        // channels is an array of currently used channels
+	certs    string       // certs is the location to the folder storing client certificates
 }
 
+// Flags is a struct of the possible flags for CLI input
 type Flags struct {
 	user     string
 	pass     string
@@ -35,14 +44,17 @@ type Flags struct {
 
 // Initialize global variables
 var (
-	config Config
-	flags  Flags
-	wg     sync.WaitGroup
+	config Config         // config stores the configuration values
+	flags  Flags          // flags stores the flag values
+	wg     sync.WaitGroup // wg stores the WaitGroup to prevent main.go from halting while routines are running
 )
 
+// main defines how the command line application works
 func main() {
+	// Create a new instance of urfave/cli
 	app := cli.NewApp()
 
+	// Each flag is saved in in the global flags variable
 	app.Flags = []cli.Flag{
 		cli.StringFlag{Name: "user", Value: "", Usage: "Username to authenticate with",
 			Destination: &flags.user, EnvVar: "SWANN_USER", },
@@ -63,6 +75,7 @@ func main() {
 	app.Name = "swanntools-client"
 	app.Usage = "client for kz/swanntools"
 	app.Action = func(c *cli.Context) error {
+		// Run the main application
 		run()
 		return nil
 	}
@@ -70,7 +83,13 @@ func main() {
 	app.Run(os.Args)
 }
 
+// run handles the main running of the application
 func run() {
+	///////////////////////////////////////
+	// 1. Validate and store flag values //
+	///////////////////////////////////////
+
+	// Assign empty Config struct to global config variable
 	config = Config{}
 
 	// Ensure that the command line flags are not empty
@@ -78,51 +97,84 @@ func run() {
 		flags.channels == "" || flags.certs == "" {
 		log.Fatalln("You are missing one or more flags. Run --help for more details.")
 	}
+
+	// Add user, pass and key flags to config
 	config.user = flags.user
 	config.pass = flags.pass
 	config.key = flags.key
 
-	// Parse the channel input
+	// Parse  channel flag string (e.g., "1,3,4" -> ["1", "3", "4"])
 	channelSlice := strings.Split(flags.channels, ",")
+
+	// Ensure channels exist
+	if len(channelSlice) == 0 {
+		log.Fatalln("You must select a channel")
+	}
+
+	// Validate each flag
 	for i, channel := range channelSlice {
+		// Convert channel to integer
 		intChannel, err := strconv.Atoi(channel)
+
+		// Ensure maxChannels constraint is kept
 		if i >= maxChannels {
 			log.Fatalf("You cannot have greater than %d streams", maxChannels)
 		} else if err != nil || intChannel > maxChannels {
 			log.Fatalf("All channels need to be a number between 1 and %d", maxChannels)
 		}
 
+		// Ensure all channels are unique
 		if intInSlice(&intChannel, &config.channels) {
 			log.Fatalln("All channels need to be unique")
 		}
+
+		// Store channel number in config
 		config.channels = append(config.channels, intChannel)
 	}
 
-	// Ensure that the certificates exist at the location
+	// Ensure certificates exist
 	for _, file := range []string{"client.key", "client.pem", "server.pem"} {
 		if _, err := os.Stat(flags.certs + "/" + file); err != nil {
 			log.Fatalln("Unable to stat certificates: ", err.Error())
 		}
 	}
+
+	// Store certificates in config
 	config.certs = flags.certs
 
-	// Resolve the TCP addresses
+	//////////////////////////////////
+	// 2. Resolve the TCP addresses //
+	//////////////////////////////////
+
+	// Resolve the source address
 	tcpAddr, err := net.ResolveTCPAddr("tcp", flags.source)
 	if err != nil {
 		log.Fatalln("Resolving the source address failed: ", err.Error())
 	}
-	config.source = tcpAddr
+
+	// Resolve the destination address
 	tcpAddr, err = net.ResolveTCPAddr("tcp", flags.dest)
 	if err != nil {
 		log.Fatalln("Resolving the destination address failed: ", err.Error())
 	}
+
+	// Store addresses in config
+	config.source = tcpAddr
 	config.dest = tcpAddr
 
-	// Retrieve the camera streams
+	////////////////////////////////////
+	// 3. Retrieve the camera streams //
+	////////////////////////////////////
+
+	// Loop through each channel number
 	for i := range config.channels {
+		// Prevent main from exiting early before goroutines exit
 		wg.Add(1)
-		go StreamToServer(&config.channels[i])
+
+		// Create a goroutine which streams channel to server
+		go Stream{channel: &config.channels[i]}.StreamToServer()
 	}
 
+	// Wait for all goroutines to complete before exiting
 	wg.Wait()
 }

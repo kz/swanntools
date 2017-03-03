@@ -16,52 +16,73 @@ const (
 	initStreamValues     = "00000000000000000000010000000300000000000000000000006800000001000000100000000N0000000100000000UUUUUUUUUU000000000000000000000000000001000000000000010124000000PPPPPPPPPPPP00009cc9c805000000000400010004000000a8c9c80500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 	successfulAuthValues = "1000000000000000"
 	failedAuthValues     = "0800000004000000"
-	timeoutSec           = 5
 )
 
+// Stream is a struct handling streaming from the DVR
+type Stream struct {
+	channel   *int    // channel is a pointer to the DVR channel
+	initBytes *[]byte // initBytes is a pointer to the byte array required to initialize a DVR stream
+}
+
 // newStreamConnection creates and sets up a new TCP connection
-func newStreamConnection(channel *int) net.Conn {
-	// Get the stream initialization bytes
-	streamInitData := initStreamBytes(channel)
+func (s *Stream) newStreamConnection() *net.Conn {
+	// Generate the initBytes if it does not exist
+	if s.initBytes == nil {
+		s.generateInitBytes()
+	}
 
 	log.Infoln("Establishing connection and authenticating with the DVR...")
 
-	// Add a backoff/retry algorithm
+	// Add a backoff algorithm to handle network failures
 	b := &backoff.Backoff{
-		Min:    100 * time.Millisecond,
-		Max:    30 * time.Second,
-		Factor: 2,
-		Jitter: false,
+		Min:    100 * time.Millisecond, // Wait a minimum of 100 milliseconds
+		Max:    30 * time.Second,       // Wait a maximum of 30 seconds
+		Factor: 2,                      // Increase the wait factor by two each failure
+		Jitter: false,                  // Disable jitter
 	}
+
+	// Create a local net.Conn variable
 	var conn net.Conn
+
+	// Use a ;; loop to handle network failure and backoff
 	for {
-		// Set up a new connection
-		var err error
-		conn, err = net.DialTimeout("tcp", config.source.String(), timeoutSec*time.Second)
+		// Attempt to dial the DVR with a timeout
+		conn, err := net.DialTimeout("tcp", config.source.String(), timeout)
 		if err != nil {
 			log.Warnln("Dialing the DVR failed:", err.Error())
+			// Increment the backoff duration
 			d := b.Duration()
+			// Wait for the backoff duration
 			log.Printf("Retrying in %s...", d)
 			time.Sleep(d)
+			// Retry by restarting the loop
 			continue
 		}
 
-		// Send the stream initialization byte array
-		conn.SetDeadline(time.Now().Add(timeoutSec * time.Second))
-		_, err = conn.Write(streamInitData)
+		// Update the connection deadline with a new timeout
+		conn.SetDeadline(time.Now().Add(timeout))
+
+		// Send the stream initialization byte array to the DVR
+		_, err = conn.Write(*s.initBytes)
 		if err != nil {
-			conn.Close()
 			log.Warnln("Writing stream init to DVR failed: ", err.Error())
+			// Close the connection as it is no longer untouched
+			conn.Close()
+			// Increment the backoff duration
 			d := b.Duration()
+			// Wait for the backoff duration
 			log.Infof("Retrying in %s...", d)
 			time.Sleep(d)
+			// Retry by restarting the looop
 			continue
 		}
 
+		// Reset the backoff and end the loop due to successful connection
+		b.Reset()
 		break
 	}
 
-	// Check authentication response
+	// Read the authentication response from the DVR
 	data := make([]byte, 8)
 	_, err := conn.Read(data)
 	if err != nil {
@@ -69,7 +90,7 @@ func newStreamConnection(channel *int) net.Conn {
 		log.Fatalln("Unable to read DVR authentication response: ", err.Error())
 	}
 
-	// Check if authenticated
+	// Check if DVR has authenticated the user
 	successfulAuthBytes, _ := hex.DecodeString(successfulAuthValues)
 	failedAuthBytes, _ := hex.DecodeString(failedAuthValues)
 	if bytes.Equal(data, successfulAuthBytes) {
@@ -83,18 +104,18 @@ func newStreamConnection(channel *int) net.Conn {
 	}
 
 	// Return the stream
-	return conn
+	return &conn
 }
 
-// initStreamBytes returns the byte array required to initialize a stream
-func initStreamBytes(channel *int) []byte {
+// generateInitBytes returns the byte array required to initialize a stream
+func (s *Stream) generateInitBytes() {
 	hexValues := initStreamValues
 
 	channelStartPos := 77
 	channelEndPos := 78
 
 	// Convert channel from 1, 2, 3, 4 to 1, 2, 4, 8 respectively
-	parsedChannel := int(math.Exp2(float64(*channel - 1)))
+	parsedChannel := int(math.Exp2(float64(*s.channel - 1)))
 	hexValues = hexValues[:channelStartPos] + fmt.Sprintf("%d", parsedChannel) + hexValues[channelEndPos:]
 
 	// Parse username
@@ -116,32 +137,46 @@ func initStreamBytes(channel *int) []byte {
 	if err != nil {
 		log.Fatalln("Unable to decode stream initialization values to byte array: ", err.Error())
 	}
-	return byteArray
+
+	s.initBytes = &byteArray
 }
 
 // StreamToServer streams the video to the server
-func StreamToServer(channel *int) {
+func (s *Stream) StreamToServer() {
+	// Remove a WaitGroup entry once stream halts so main can exit
 	defer wg.Done()
 
-	conn := newStreamConnection(channel)
+	// Create a new stream connection
+	conn := *s.newStreamConnection()
 	defer conn.Close()
 
 	// Create a client and handler to receive messages
-	c := Client(channel)
-	go Handle(c)
+	c := Client(s.channel)
 
-	// Get the main camera stream
+	// Run the client handler in a goroutine
+	go c.Handle()
+
+	// Get the main camera stream and send it to the client handler
 	for {
+		// Create a byte array
 		data := make([]byte, socketBufferSize)
-		conn.SetDeadline(time.Now().Add(timeoutSec * time.Second))
+
+		// Update the DVR conn timeout
+		conn.SetDeadline(time.Now().Add(timeout))
+
+		// Read from the DVR
 		n, err := conn.Read(data)
 		if err != nil {
 			log.Warnln("Error occurred while reading from DVR stream connection: ", err.Error())
+			// Close the connection
 			conn.Close()
-			conn = newStreamConnection(channel)
+			// Reattempt the connection
+			conn = *s.newStreamConnection()
+			// Loop again and listen for more data
 			continue
 		}
 
+		// Send the data to the c.send chan for handling by the client handler
 		c.send <- data[:n]
 	}
 }
