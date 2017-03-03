@@ -5,7 +5,6 @@ import (
 	"net"
 	"bufio"
 	"strconv"
-	"encoding/hex"
 	"bytes"
 	log "github.com/Sirupsen/logrus"
 )
@@ -108,8 +107,10 @@ func handleConn(conn net.Conn) {
 			break
 		}
 
-		// TODO: Do stuff with the camera stream!
-		print(hex.Dump(data[:n]))
+		// Send data to each consumer
+		for _, consumer := range config.consumers {
+			consumer.Receiver <- Data{channel, data[:n]}
+		}
 	}
 }
 

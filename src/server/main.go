@@ -95,9 +95,17 @@ func run() {
 
 		// Append a new consumer to config.consumers
 		config.consumers = append(config.consumers, Consumer{
-			Receiver:    make(chan []byte, socketBufferSize),
+			Receiver:    make(chan Data),
 			HandlerType: SaveDiskHandlerType,
+			Destination: flags.saveDisk,
 		})
+
+		log.WithField("Path", flags.saveDisk).Infoln("Save disk consumer added")
+	}
+
+	// Start handlers for all consumers
+	for _, consumer := range config.consumers {
+		go consumer.Handle()
 	}
 
 	// Resolve the TCP address to bind to

@@ -14,11 +14,14 @@ The below directory listing explains the structure of this repository.
 ├── src                           # Source files
 │   ├── client                    # Retrieves and forwards DVR camera streams to the server
 │   │   ├── client.go             # Handles forwarding of streams to server
+│   │   ├── main.go               # Helper functions for the client
 │   │   ├── main.go               # Command line point of entry
 │   │   └── stream.go             # Handles connection and receiving streams from the DVR
 │   ├── server
+│   │   ├── consumer.go           # Performs actions on streams provided by client
+│   │   ├── helper.go             # Helper functions for the server
 │   │   ├── main.go               # Command line point of entry
-│   │   └── server.go             # Handles listening to connections 
+│   │   └── server.go             # Handles listening to connections from client 
 │   └── misc
 │       └── auth                      # Miscellaneous code to test the web panel login protocol of the DVR,
 │           │                         # made redundant as the DVR authenticates camera streaming separately
@@ -32,15 +35,18 @@ The below directory listing explains the structure of this repository.
 ## Installation
 The program requires a folder created  with certificate files with file names `client.pem`, `client.key`, `server.pem` and `server.key`. Navigate to a new folder of your choice and generate the required certificates for TLS by running: `openssl req -new -nodes -x509 -out client.pem -keyout client.key && openssl req -new -nodes -x509 -out server.pem -keyout server.key`
 
+## Usage
+Work in progress. Usage details are to be determined.
+
 ## Roadmap
 
 - [X] Create a Go script which can authenticate with the DVR via its media protocol
-- [ ] Add streaming of cameras to the script
+- [X] Add streaming of cameras to the script
     - [X] Receive a continuous stream of a single channel
     - [X] Receive a continuous stream of multiple channels
-    - [ ] Implement a TCP proxy
+    - [X] Implement a TCP proxy
         - [X] Implement a client
-        - [ ] Implement a server
+        - [X] Implement a server
 - [ ] Plan a method to stream the H264 stream to ~~AWS/~~Azure in order to transcode, store and stream video
     - Plan must involve creation of an interface to allow creation of an AWS script
     - The [Azure/azure-sdk-for-go](https://github.com/Azure/azure-sdk-for-go) can be used to upload files to cold blob storage
