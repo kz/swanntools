@@ -28,11 +28,10 @@ type client struct {
 
 // Client creates a new client struct
 func Client(channel *int) *client {
-	return &client{
-		conn:    newServerConnection(channel),
-		send:    make(chan []byte, socketBufferSize),
-		channel: channel,
-	}
+	c := &client{channel: channel}
+	c.conn = c.newServerConnection()
+	c.send = make(chan []byte, socketBufferSize)
+	return c
 }
 
 // Handle handles events such as messages being sent
@@ -51,7 +50,7 @@ func (c *client) Handle() {
 				// Close the connection
 				c.conn.Close()
 				// Reattempt the connection
-				c.conn = newServerConnection(c.channel)
+				c.conn = c.newServerConnection()
 				// Loop again
 				continue
 			}
@@ -60,7 +59,7 @@ func (c *client) Handle() {
 }
 
 // newServerConnection creates a new TLS connection with the server
-func newServerConnection(channel *int) *tls.Conn {
+func (c *client) newServerConnection() *tls.Conn {
 	////////////////////////////
 	// 1. Handle certificates //
 	////////////////////////////
@@ -126,7 +125,7 @@ func newServerConnection(channel *int) *tls.Conn {
 		conn.SetDeadline(time.Now().Add(timeout))
 
 		// Send the channel number along with login details
-		_, err = conn.Write([]byte(strconv.Itoa(*channel) + config.key + "\n"))
+		_, err = conn.Write([]byte(strconv.Itoa(*c.channel) + config.key + "\n"))
 		if err != nil {
 			// Close the connection as it is no longer untouched
 			conn.Close()
