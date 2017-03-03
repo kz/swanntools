@@ -15,7 +15,6 @@ const (
 	FailedAuthString     = "403"
 	InvalidChannelString = "400"
 	ChannelInUseString   = "409"
-	socketBufferSize     = 1460
 )
 
 func StartListener() {
@@ -28,75 +27,79 @@ func StartListener() {
 	// Add certificate to TLS config
 	tlsConfig := &tls.Config{Certificates: []tls.Certificate{cert}}
 
+	// Listen on the bindAddr for stream bytes
 	listener, err := tls.Listen("tcp", config.bindAddr.String(), tlsConfig)
 	if err != nil {
 		log.Fatalln("Unable to start TLS listener: ", err.Error())
 	}
 
-	// Print debugging messages
 	log.Infof("Server ready and listening on: %s", config.bindAddr)
 
 	for {
 		// TODO: Use Mutexes to protect channels from simultaneous writes
+
+		// Accept a new connection
 		conn, err := listener.Accept()
 		if err != nil {
 			log.Warnln("An error occured when accepting a connection: ", err.Error())
+			// Close the connection on error
 			conn.Close()
+			// Listen for more connections
 			continue
 		}
+
+		// Handle the connection
 		go handleConn(conn)
 	}
 }
 
 func handleConn(conn net.Conn) {
-	var isAuthenticated bool = false
-	var channel int
-	var response string
+	var isAuthenticated bool = false // isAuthenticated stores whether the client is authenticated
+	var channel int                  // channel stores the channel the client is sending
+	var response string              // response stores the response code to send to the client
 
 	defer func(channel *int) {
+		// Close the connection upon connection end
 		conn.Close()
+		// Remove channel from channelsInUse if appropriate
 		if channel != nil {
-			// Remove channel from channelsInUse if appropriate
 			if pos, isPresent := intPositionInSlice(channel, &channelsInUse); isPresent {
 				channelsInUse = append(channelsInUse[:pos], channelsInUse[pos+1:]...)
 			}
 		}
 	}(&channel)
 
-	// Handle authentication
-	r := bufio.NewReader(conn)
-	for {
-		if isAuthenticated {
-			// Append the channel to slice of channels in use
-			channelsInUse = append(channelsInUse, channel)
-			break
-		}
+	// Read the authentication data provided by the client
+	authData := bufio.NewReader(conn)
 
-		// Attempt authentication
-		isAuthenticated, channel, response = parseAuthMessage(r)
+	// Attempt authentication
+	isAuthenticated, channel, response = parseAuthMessage(authData)
 
-		// Send appropriate response to the client
-		if isAuthenticated {
-			log.WithFields(log.Fields{
-				"source": conn.RemoteAddr().String(), "channel": channel,
-			}).Println("Auth success")
-		} else {
-			log.WithFields(log.Fields{
-				"source": conn.RemoteAddr().String(), "channel": channel, "code": response,
-			}).Warnln("Auth failure")
-		}
+	log.WithFields(log.Fields{"source": conn.RemoteAddr().String(), "channel": channel, "code": response, }).
+		Infof("Auth status: %v\n", isAuthenticated)
 
-		// Send the response to the client
-		_, err := conn.Write([]byte(response))
-		if err != nil {
-			log.Infoln("Unable to write response to client: ", err.Error())
-			break
-		}
+	// Send the response to the client
+	_, err := conn.Write([]byte(response))
+	if err != nil {
+		log.Warnln("Unable to write response to client: ", err.Error())
+	}
+
+	// Cease execution if authentication failed
+	if !isAuthenticated {
+		return
+	}
+
+	// Append the channel to slice of channels in use
+	if intInSlice(&channel, &channelsInUse) {
+		channelsInUse = append(channelsInUse, channel)
 	}
 
 	// Get the camera stream
 	for {
+		// Create a byte array to store data
 		data := make([]byte, socketBufferSize)
+
+		// Read the data from the connection
 		n, err := conn.Read(data)
 		if err != nil {
 			log.WithFields(log.Fields{

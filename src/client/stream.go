@@ -46,14 +46,16 @@ func (s *Stream) newStreamConnection() *net.Conn {
 
 	// Use a ;; loop to handle network failure and backoff
 	for {
+		var err error
+
 		// Attempt to dial the DVR with a timeout
-		conn, err := net.DialTimeout("tcp", config.source.String(), timeout)
+		conn, err = net.DialTimeout("tcp", config.source.String(), timeout)
 		if err != nil {
 			log.Warnln("Dialing the DVR failed:", err.Error())
 			// Increment the backoff duration
 			d := b.Duration()
 			// Wait for the backoff duration
-			log.Printf("Retrying in %s...", d)
+			log.Infof("Retrying in %s...", d)
 			time.Sleep(d)
 			// Retry by restarting the loop
 			continue
@@ -73,7 +75,7 @@ func (s *Stream) newStreamConnection() *net.Conn {
 			// Wait for the backoff duration
 			log.Infof("Retrying in %s...", d)
 			time.Sleep(d)
-			// Retry by restarting the looop
+			// Retry by restarting the loop
 			continue
 		}
 

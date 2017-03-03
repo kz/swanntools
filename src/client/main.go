@@ -100,7 +100,7 @@ func run() {
 	config.pass = flags.pass
 	config.key = flags.key
 
-	// Parse channel flag string (e.g., "1,3,4" -> ["1", "3", "4"])
+	// Parse  channel flag string (e.g., "1,3,4" -> ["1", "3", "4"])
 	channelSlice := strings.Split(flags.channels, ",")
 
 	// Ensure channels exist
@@ -144,20 +144,20 @@ func run() {
 	//////////////////////////////////
 
 	// Resolve the source address
-	tcpAddr, err := net.ResolveTCPAddr("tcp", flags.source)
+	sourceTCPAddr, err := net.ResolveTCPAddr("tcp", flags.source)
 	if err != nil {
 		log.Fatalln("Resolving the source address failed: ", err.Error())
 	}
 
 	// Resolve the destination address
-	tcpAddr, err = net.ResolveTCPAddr("tcp", flags.dest)
+	destTCPAddr, err := net.ResolveTCPAddr("tcp", flags.dest)
 	if err != nil {
 		log.Fatalln("Resolving the destination address failed: ", err.Error())
 	}
 
 	// Store addresses in config
-	config.source = tcpAddr
-	config.dest = tcpAddr
+	config.source = sourceTCPAddr
+	config.dest = destTCPAddr
 
 	////////////////////////////////////
 	// 3. Retrieve the camera streams //
@@ -169,7 +169,8 @@ func run() {
 		wg.Add(1)
 
 		// Create a goroutine which streams channel to server
-		go Stream{channel: &config.channels[i]}.StreamToServer()
+		s := Stream{channel: &config.channels[i]}
+		go s.StreamToServer()
 	}
 
 	// Wait for all goroutines to complete before exiting
