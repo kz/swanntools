@@ -5,6 +5,8 @@ Although the DVR4-1200 only streams 320x240 over both mobile and media ports, it
 
 This repository is part of a long-term project to build a more secure system piggybacking off the DVR4-1200 with cloud backups and much better web/mobile clients.
 
+**Project status:** Postponed due to exams.
+
 ## Structure
 
 The below directory listing explains the structure of this repository.
