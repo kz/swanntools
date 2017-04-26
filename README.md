@@ -13,22 +13,24 @@ The below directory listing explains the structure of this repository.
 
 ```
 .
-├── src                           # Source files
-│   ├── client                    # Retrieves and forwards DVR camera streams to the server
-│   │   ├── client.go             # Handles forwarding of streams to server
-│   │   ├── main.go               # Helper functions for the client
-│   │   ├── main.go               # Command line point of entry
-│   │   └── stream.go             # Handles connection and receiving streams from the DVR
+├── src                                   # Source files
+│   ├── client                            # Retrieves and forwards DVR camera streams to the server
+│   │   ├── client.go                     # Handles forwarding of streams to server
+│   │   ├── main.go                       # Helper functions for the client
+│   │   ├── main.go                       # Command line point of entry
+│   │   └── stream.go                     # Handles connection and receiving streams from the DVR
 │   ├── server
-│   │   ├── consumer.go           # Performs actions on streams provided by client
-│   │   ├── helper.go             # Helper functions for the server
-│   │   ├── main.go               # Command line point of entry
-│   │   └── server.go             # Handles listening to connections from client 
+│   │   ├── consumer.go                   # Performs actions on streams provided by client
+│   │   ├── helper.go                     # Helper functions for the server
+│   │   ├── main.go                       # Command line point of entry
+│   │   └── server.go                     # Handles listening to connections from client 
 │   └── misc
-│       └── auth                      # Miscellaneous code to test the web panel login protocol of the DVR,
-│           │                         # made redundant as the DVR authenticates camera streaming separately
+│       └── auth                          # Miscellaneous code to test the web panel login protocol of the DVR,
+│           │                             # made redundant as the DVR authenticates camera streaming separately
 │           ├── authenticate.go       
 │           └── authenticate_test.go
+├── vulnscan
+│   └── zhuhai-raysharp-cve2015-8286.nse  # NSE script for nmap to check IP(s) for affected devices
 ├── .gitignore
 ├── LICENSE.md
 └── README.md
