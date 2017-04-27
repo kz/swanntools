@@ -1,12 +1,28 @@
 local nmap = require "nmap"
-local stdnse = require "stdnse"
 local vulns = require "vulns"
 
 description = [[
+Checks if the target machine is a Zhuhai RaySharp DVR model vulnerable to remote authentication bypass.
+
 Zhuhai RaySharp firmware exposes all configuration data (including authentication data) over its media port, allowing remote attackers to obtain access via a session on TCP port 9000.
 ]]
 
+---
 -- @usage nmap -p 9000,9001 <target> --script=zhuhai-raysharp-cve2015-8286.nse
+--
+--
+--| zhuhai-raysharp-cve2015-8286:
+--|   VULNERABLE:
+--|   Zhuhai Raysharp remote authentication bypass check
+--|     State: LIKELY VULNERABLE
+--|     IDs:  CVE:CVE-2015-8286
+--|     Risk factor: High
+--|       Zhuhai RaySharp firmware exposes all configuration data (including authentication data) over its media port, allowing remote attackers to obtain access via a session on TCP port 9000.
+--|     Disclosure date: 2016-2-18
+--|     References:
+--|       https://github.com/kz/swanntools
+--|_      https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-8286
+
 
 author = "Kelvin Zhang"
 license = "Same as Nmap--See https://nmap.org/book/man-legal.html"
@@ -33,7 +49,7 @@ action = function(host, port)
         risk_factor = "High",
         description = [[
 Zhuhai RaySharp firmware exposes all configuration data (including authentication data) over its media port, allowing remote attackers to obtain access via a session on TCP port 9000.]],
-        dates = { disclosure = { year = '2016', month = '02', day = '18' } },
+        dates = { disclosure = { year = 2016, month = 02, day = 18 } },
         check_results = { response = "" },
         references = { 'https://github.com/kz/swanntools' },
     }
@@ -59,7 +75,14 @@ Zhuhai RaySharp firmware exposes all configuration data (including authenticatio
 
     -- Compare response
     if response == expectedResponse then
-        vuln_table.state = vulns.STATE.STATE_VULN
+        -- Detected
+        vuln_table.state = vulns.STATE.LIKELY_VULN
+
+        -- Update service name
+        port.version.name = "zhuhai-raysharp"
+        port.version.name_confidence = "10"
+        port.version.service_dtype = "probed"
+        nmap.set_port_version(host, port)
     end
 
     return report:make_output(vuln_table)
