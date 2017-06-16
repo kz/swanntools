@@ -1,7 +1,5 @@
 # swanntools
-Capture tools for the Swann DVR4-1200 DVR (also known as DVR04B and DM70-D, manufactured by RaySharp), inspired by [meatheadmike/swanntools](https://github.com/meatheadmike/swanntools) which was developed for DVR8-2600. Whereas the latter's mobile stream script is compatible with the DVR4-1200 (for a 320x240 stream), the media port (featuring 704x480 feeds for similar model DVRs [but not the DVR4-1200]) does not.
-
-Although the DVR4-1200 only streams 320x240 over both mobile and media ports, it is worth using the media port in case the code can be adapted to similar model DVRs which do provide higher quality streams.
+Capture tools for the Swann DVR4-1200 DVR (also known as DVR04B and DM70-D, manufactured by RaySharp), inspired by [meatheadmike/swanntools](https://github.com/meatheadmike/swanntools) which was developed for DVR8-2600. Whereas the latter's mobile stream script is compatible with the DVR4-1200 (for a 320x240 stream) its media port script (for a higher quality 704x480 stream) is not compatible with the DVR4-1200, hence the creation of this repository.
 
 This repository is part of a long-term project to build a more secure system piggybacking off the DVR4-1200 with cloud backups and much better web/mobile clients.
 
@@ -158,5 +156,31 @@ If the authentication succeeds, the following messages are sent in the following
 
 When setting your camera channel to one which does not have a camera connected via BNC, the stream still works. However, you may see `31dcH264` a lot and if you use the `nc` command, you may repeatedly hear the system bell sound (probably due to the terminal displaying the bell character).
 
+---
 
+### Zoneminder and Media Port Quality (2017-06-16)
 
+Previously, I made the false impression that the media port for the DVR4-1200 streamed at the same lower resolution as the mobile port based on the statistics provided when piping the media port stream to VLC. However, this is false; the media port does indeed stream at 704x480.
+
+Due to the temporarily halted progress of this repository at the time of writing and the need to move to a better DVR solution which didn't involve buying a not-much-better DVR to replace the DVR4-1200, I recently installed Zoneminder. 
+
+The steps to enable the media port to stream to Zoneminder (as opposed to the mobile port which can be done using [zmodopipe](https://wiki.zoneminder.com/Zmodopipe)) are relatively straightforward:
+
+1. Install Zoneminder
+2. Save the following bash script to your home directory:
+```sh
+#!/bin/sh
+mkfifo /tmp/dvr1
+chmod 777 /tmp/dvr1
+echo "Recording"
+while true; do
+        echo '[The camera stream message from the previous journal entry above]'  | xxd -r -p | nc [DVR IP] [DVR PORT] > /tmp/dvr1
+        echo "Recording stopped. Retrying..." # Just in case the stream breaks
+        sleep 2
+done
+```
+3. Add a systemd/init.d/crontab/etc. script to run this script at boot (I use a systemd script which starts tmux with split windows to run two separate scripts to handle two separate channels)
+4. In the Zoneminder web panel, add a new monitor with the source type `ffmpeg`, source path `/tmp/dvr1` and capture size `704x480`
+5. Wait about half a minute and the stream should be available!
+
+The above code creates a FIFO queue, connects to the DVR using `nc`, writes the raw 264 stream to the FIFO queue, and ensures that the stream is restarted if interrupted. (Upon a second look, I just realised that zmodopipe does have a media port option for this DVR model, but it's always nice to a DIY approach.)
