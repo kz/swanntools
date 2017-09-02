@@ -3,7 +3,7 @@ Capture tools for the Swann DVR4-1200 DVR (also known as DVR04B and DM70-D, manu
 
 This repository is part of a long-term project to build a more secure system piggybacking off the DVR4-1200 with cloud backups and much better web/mobile clients.
 
-**Project status:** Postponed due to exams.
+**Project status:** Postponed due to a faulty DVR.
 
 ## Structure
 
